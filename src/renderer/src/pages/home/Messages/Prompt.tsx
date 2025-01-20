@@ -1,4 +1,4 @@
-import AssistantSettingsPopup from '@renderer/components/AssistantSettings'
+import AssistantSettingsPopup from '@renderer/pages/settings/AssistantSettings'
 import { Assistant } from '@renderer/types'
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -28,9 +28,10 @@ const Container = styled.div`
   padding: 10px 20px;
   background-color: var(--color-background-soft);
   margin-bottom: 20px;
-  margin: 0 20px 0 20px;
+  margin: 4px 20px 0 20px;
   border-radius: 6px;
   cursor: pointer;
+  border: 0.5px solid var(--color-border);
 `
 
 const Text = styled.div`

@@ -26,6 +26,7 @@ const initialState: LlmState = {
     {
       id: 'silicon',
       name: 'Silicon',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.siliconflow.cn',
       models: SYSTEM_MODELS.silicon,
@@ -33,8 +34,19 @@ const initialState: LlmState = {
       enabled: true
     },
     {
+      id: 'aihubmix',
+      name: 'AiHubMix',
+      type: 'openai',
+      apiKey: '',
+      apiHost: 'https://aihubmix.com',
+      models: SYSTEM_MODELS.aihubmix,
+      isSystem: true,
+      enabled: false
+    },
+    {
       id: 'ollama',
       name: 'Ollama',
+      type: 'openai',
       apiKey: '',
       apiHost: 'http://localhost:11434/v1/',
       models: SYSTEM_MODELS.ollama,
@@ -44,6 +56,7 @@ const initialState: LlmState = {
     {
       id: 'anthropic',
       name: 'Anthropic',
+      type: 'anthropic',
       apiKey: '',
       apiHost: 'https://api.anthropic.com/',
       models: SYSTEM_MODELS.anthropic,
@@ -53,6 +66,7 @@ const initialState: LlmState = {
     {
       id: 'openai',
       name: 'OpenAI',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.openai.com',
       models: SYSTEM_MODELS.openai,
@@ -62,6 +76,7 @@ const initialState: LlmState = {
     {
       id: 'azure-openai',
       name: 'Azure OpenAI',
+      type: 'openai',
       apiKey: '',
       apiHost: '',
       apiVersion: '',
@@ -72,6 +87,7 @@ const initialState: LlmState = {
     {
       id: 'gemini',
       name: 'Gemini',
+      type: 'gemini',
       apiKey: '',
       apiHost: 'https://generativelanguage.googleapis.com',
       models: SYSTEM_MODELS.gemini,
@@ -81,6 +97,7 @@ const initialState: LlmState = {
     {
       id: 'deepseek',
       name: 'deepseek',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.deepseek.com',
       models: SYSTEM_MODELS.deepseek,
@@ -90,6 +107,7 @@ const initialState: LlmState = {
     {
       id: 'ocoolai',
       name: 'ocoolAI',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://one.ooo.cool',
       models: SYSTEM_MODELS.ocoolai,
@@ -99,6 +117,7 @@ const initialState: LlmState = {
     {
       id: 'github',
       name: 'Github Models',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://models.inference.ai.azure.com/',
       models: SYSTEM_MODELS.github,
@@ -108,6 +127,7 @@ const initialState: LlmState = {
     {
       id: 'yi',
       name: 'Yi',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.lingyiwanwu.com',
       models: SYSTEM_MODELS.yi,
@@ -117,6 +137,7 @@ const initialState: LlmState = {
     {
       id: 'zhipu',
       name: 'ZhiPu',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://open.bigmodel.cn/api/paas/v4/',
       models: SYSTEM_MODELS.zhipu,
@@ -126,6 +147,7 @@ const initialState: LlmState = {
     {
       id: 'moonshot',
       name: 'Moonshot AI',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.moonshot.cn',
       models: SYSTEM_MODELS.moonshot,
@@ -135,6 +157,7 @@ const initialState: LlmState = {
     {
       id: 'baichuan',
       name: 'BAICHUAN AI',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.baichuan-ai.com',
       models: SYSTEM_MODELS.baichuan,
@@ -144,6 +167,7 @@ const initialState: LlmState = {
     {
       id: 'dashscope',
       name: 'Bailian',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://dashscope.aliyuncs.com/compatible-mode/v1/',
       models: SYSTEM_MODELS.bailian,
@@ -153,6 +177,7 @@ const initialState: LlmState = {
     {
       id: 'stepfun',
       name: 'StepFun',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.stepfun.com',
       models: SYSTEM_MODELS.stepfun,
@@ -162,6 +187,7 @@ const initialState: LlmState = {
     {
       id: 'doubao',
       name: 'doubao',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://ark.cn-beijing.volces.com/api/v3/',
       models: SYSTEM_MODELS.doubao,
@@ -171,6 +197,7 @@ const initialState: LlmState = {
     {
       id: 'minimax',
       name: 'MiniMax',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.minimax.chat/v1/',
       models: SYSTEM_MODELS.minimax,
@@ -180,6 +207,7 @@ const initialState: LlmState = {
     {
       id: 'graphrag-kylin-mountain',
       name: 'GraphRAG',
+      type: 'openai',
       apiKey: '',
       apiHost: '',
       models: [],
@@ -189,6 +217,7 @@ const initialState: LlmState = {
     {
       id: 'openrouter',
       name: 'OpenRouter',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://openrouter.ai/api/v1/',
       models: SYSTEM_MODELS.openrouter,
@@ -198,6 +227,7 @@ const initialState: LlmState = {
     {
       id: 'groq',
       name: 'Groq',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.groq.com/openai',
       models: SYSTEM_MODELS.groq,
@@ -207,6 +237,7 @@ const initialState: LlmState = {
     {
       id: 'together',
       name: 'Together',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.together.xyz',
       models: SYSTEM_MODELS.together,
@@ -216,6 +247,7 @@ const initialState: LlmState = {
     {
       id: 'fireworks',
       name: 'Fireworks',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.fireworks.ai/inference',
       models: SYSTEM_MODELS.fireworks,
@@ -225,6 +257,7 @@ const initialState: LlmState = {
     {
       id: 'zhinao',
       name: 'zhinao',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.360.cn',
       models: SYSTEM_MODELS.zhinao,
@@ -234,6 +267,7 @@ const initialState: LlmState = {
     {
       id: 'hunyuan',
       name: 'hunyuan',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://api.hunyuan.cloud.tencent.com',
       models: SYSTEM_MODELS.hunyuan,
@@ -243,6 +277,7 @@ const initialState: LlmState = {
     {
       id: 'nvidia',
       name: 'nvidia',
+      type: 'openai',
       apiKey: '',
       apiHost: 'https://integrate.api.nvidia.com',
       models: SYSTEM_MODELS.nvidia,
@@ -250,11 +285,52 @@ const initialState: LlmState = {
       enabled: false
     },
     {
-      id: 'aihubmix',
-      name: 'AiHubMix',
+      id: 'grok',
+      name: 'Grok',
+      type: 'openai',
       apiKey: '',
-      apiHost: 'https://aihubmix.com',
-      models: SYSTEM_MODELS.aihubmix,
+      apiHost: 'https://api.x.ai',
+      models: SYSTEM_MODELS.grok,
+      isSystem: true,
+      enabled: false
+    },
+    {
+      id: 'hyperbolic',
+      name: 'Hyperbolic',
+      type: 'openai',
+      apiKey: '',
+      apiHost: 'https://api.hyperbolic.xyz',
+      models: SYSTEM_MODELS.hyperbolic,
+      isSystem: true,
+      enabled: false
+    },
+    {
+      id: 'mistral',
+      name: 'Mistral',
+      type: 'openai',
+      apiKey: '',
+      apiHost: 'https://api.mistral.ai',
+      models: SYSTEM_MODELS.mistral,
+      isSystem: true,
+      enabled: false
+    },
+    {
+      id: 'jina',
+      name: 'Jina',
+      type: 'openai',
+      apiKey: '',
+      apiHost: 'https://api.jina.ai',
+      models: SYSTEM_MODELS.jina,
+      isSystem: true,
+      enabled: false
+    },
+    {
+      id: 'qwenlm',
+      name: 'QwenLM',
+      type: 'openai',
+      apiKey: '',
+      apiHost: 'https://chat.qwenlm.ai/api/',
+      models: SYSTEM_MODELS.qwenlm,
       isSystem: true,
       enabled: false
     }
@@ -303,7 +379,7 @@ const settingsSlice = createSlice({
       state.providers = action.payload
     },
     addProvider: (state, action: PayloadAction<Provider>) => {
-      state.providers.push(action.payload)
+      state.providers.unshift(action.payload)
     },
     removeProvider: (state, action: PayloadAction<Provider>) => {
       state.providers = state.providers.filter((p) => p.id !== action.payload.id)
@@ -313,7 +389,8 @@ const settingsSlice = createSlice({
         p.id === action.payload.providerId
           ? {
               ...p,
-              models: uniqBy(p.models.concat(action.payload.model), 'id')
+              models: uniqBy(p.models.concat(action.payload.model), 'id'),
+              enabled: true
             }
           : p
       )
@@ -330,6 +407,7 @@ const settingsSlice = createSlice({
     },
     setDefaultModel: (state, action: PayloadAction<{ model: Model }>) => {
       state.defaultModel = action.payload.model
+      window.electron.ipcRenderer.send('miniwindow-reload')
     },
     setTopicNamingModel: (state, action: PayloadAction<{ model: Model }>) => {
       state.topicNamingModel = action.payload.model

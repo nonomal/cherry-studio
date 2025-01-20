@@ -8,11 +8,13 @@ import { uuid } from '@renderer/utils'
 export function usePaintings() {
   const paintings = useAppSelector((state) => state.paintings.paintings)
   const dispatch = useAppDispatch()
+  const generateRandomSeed = () => Math.floor(Math.random() * 1000000).toString()
 
   return {
     paintings,
     addPainting: () => {
       const newPainting: Painting = {
+        model: TEXT_TO_IMAGES_MODELS[0].id,
         id: uuid(),
         urls: [],
         files: [],
@@ -20,10 +22,10 @@ export function usePaintings() {
         negativePrompt: '',
         imageSize: '1024x1024',
         numImages: 1,
-        seed: '',
+        seed: generateRandomSeed(),
         steps: 25,
         guidanceScale: 4.5,
-        model: TEXT_TO_IMAGES_MODELS[0].id
+        promptEnhancement: true
       }
       dispatch(addPainting(newPainting))
       return newPainting

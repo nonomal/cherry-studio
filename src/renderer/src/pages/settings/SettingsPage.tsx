@@ -1,8 +1,9 @@
 import {
   CloudOutlined,
   InfoCircleOutlined,
+  LayoutOutlined,
   MacCommandOutlined,
-  MessageOutlined,
+  RocketOutlined,
   SaveOutlined,
   SettingOutlined
 } from '@ant-design/icons'
@@ -14,11 +15,12 @@ import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 
 import AboutSettings from './AboutSettings'
-import AssistantSettings from './AssistantSettings'
 import DataSettings from './DataSettings/DataSettings'
+import DisplaySettings from './DisplaySettings/DisplaySettings'
 import GeneralSettings from './GeneralSettings'
-import ModelSettings from './ModelSettings'
+import ModelSettings from './ModalSettings/ModelSettings'
 import ProvidersList from './ProviderSettings'
+import QuickAssistantSettings from './QuickAssistantSettings'
 import ShortcutSettings from './ShortcutSettings'
 
 const SettingsPage: FC = () => {
@@ -39,7 +41,7 @@ const SettingsPage: FC = () => {
               <MenuItemLink to="/settings/provider">
                 <MenuItem className={isRoute('/settings/provider')}>
                   <CloudOutlined />
-                  {t('settings.provider')}
+                  {t('settings.provider.title')}
                 </MenuItem>
               </MenuItemLink>
               <MenuItemLink to="/settings/model">
@@ -50,16 +52,16 @@ const SettingsPage: FC = () => {
               </MenuItemLink>
             </>
           )}
-          <MenuItemLink to="/settings/assistant">
-            <MenuItem className={isRoute('/settings/assistant')}>
-              <MessageOutlined />
-              {t('settings.assistant')}
-            </MenuItem>
-          </MenuItemLink>
           <MenuItemLink to="/settings/general">
             <MenuItem className={isRoute('/settings/general')}>
               <SettingOutlined />
               {t('settings.general')}
+            </MenuItem>
+          </MenuItemLink>
+          <MenuItemLink to="/settings/display">
+            <MenuItem className={isRoute('/settings/display')}>
+              <LayoutOutlined />
+              {t('settings.display.title')}
             </MenuItem>
           </MenuItemLink>
           <MenuItemLink to="/settings/shortcut">
@@ -68,10 +70,16 @@ const SettingsPage: FC = () => {
               {t('settings.shortcuts.title')}
             </MenuItem>
           </MenuItemLink>
+          <MenuItemLink to="/settings/quickAssistant">
+            <MenuItem className={isRoute('/settings/quickAssistant')}>
+              <RocketOutlined />
+              {t('settings.quickAssistant.title')}
+            </MenuItem>
+          </MenuItemLink>
           <MenuItemLink to="/settings/data">
             <MenuItem className={isRoute('/settings/data')}>
               <SaveOutlined />
-              {t('settings.data')}
+              {t('settings.data.title')}
             </MenuItem>
           </MenuItemLink>
           <MenuItemLink to="/settings/about">
@@ -85,9 +93,10 @@ const SettingsPage: FC = () => {
           <Routes>
             <Route path="provider" element={<ProvidersList />} />
             <Route path="model" element={<ModelSettings />} />
-            <Route path="assistant" element={<AssistantSettings />} />
             <Route path="general/*" element={<GeneralSettings />} />
+            <Route path="display" element={<DisplaySettings />} />
             <Route path="data/*" element={<DataSettings />} />
+            <Route path="quickAssistant" element={<QuickAssistantSettings />} />
             <Route path="shortcut" element={<ShortcutSettings />} />
             <Route path="about" element={<AboutSettings />} />
           </Routes>
@@ -115,6 +124,7 @@ const SettingMenus = styled.ul`
   min-width: var(--settings-width);
   border-right: 0.5px solid var(--color-border);
   padding: 10px;
+  user-select: none;
 `
 
 const MenuItemLink = styled(Link)`
@@ -131,9 +141,10 @@ const MenuItem = styled.li`
   padding: 6px 10px;
   width: 100%;
   cursor: pointer;
-  border-radius: 5px;
+  border-radius: var(--list-item-border-radius);
   font-weight: 500;
   transition: all 0.2s ease-in-out;
+  border: 0.5px solid transparent;
   .anticon {
     font-size: 16px;
     opacity: 0.8;
@@ -148,7 +159,8 @@ const MenuItem = styled.li`
     background: var(--color-background-soft);
   }
   &.active {
-    background: var(--color-background-mute);
+    background: var(--color-background-soft);
+    border: 0.5px solid var(--color-border);
   }
 `
 

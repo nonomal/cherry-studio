@@ -11,10 +11,31 @@ files:
   - '!src'
   - '!scripts'
   - '!local'
+  - '!docs'
+  - '!packages'
+  - '!stats.html'
+  - '!*.md'
+  - '!**/*.{map,ts,tsx,jsx,less,scss,sass,css.d.ts,d.cts,d.mts,md,markdown,yaml,yml}'
+  - '!**/{test,tests,__tests__,coverage}/**'
+  - '!**/*.{spec,test}.{js,jsx,ts,tsx}'
+  - '!**/*.min.*.map'
+  - '!**/*.d.ts'
+  - '!**/{.DS_Store,Thumbs.db}'
+  - '!**/{LICENSE,LICENSE.txt,LICENSE-MIT.txt,*.LICENSE.txt,NOTICE.txt,README.md,CHANGELOG.md}'
+  - '!node_modules/rollup-plugin-visualizer'
+  - '!node_modules/js-tiktoken'
+  - '!node_modules/pdf-parse/lib/pdf.js/{v1.9.426,v1.10.88,v2.0.550}'
+  - '!node_modules/mammoth/{mammoth.browser.js,mammoth.browser.min.js}'
+  - '!node_modules/html2canvas/dist/{html2canvas.min.js,html2canvas.esm.js}'
 asarUnpack:
   - resources/**
+  - '**/*.{node,dll,metal,exp,lib}'
 win:
   executableName: Cherry Studio
+  artifactName: ${productName}-${version}-portable.${ext}
+  target:
+    - target: nsis
+    - target: portable
 nsis:
   artifactName: ${productName}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -22,14 +43,16 @@ nsis:
   createDesktopShortcut: always
   allowToChangeInstallationDirectory: true
   oneClick: false
+  include: build/nsis-installer.nsh
 mac:
   entitlementsInherit: build/entitlements.mac.plist
+  notarize: false
+  artifactName: ${productName}-${version}-${arch}.${ext}
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
   target:
     - target: dmg
       arch:
@@ -39,30 +62,29 @@ mac:
       arch:
         - arm64
         - x64
-dmg:
-  artifactName: ${productName}-${version}-${arch}.${ext}
 linux:
+  artifactName: ${productName}-${version}-${arch}.${ext}
   target:
     - target: AppImage
       arch:
         - arm64
         - x64
-    # - snap
-    # - deb
   maintainer: electronjs.org
   category: Utility
-appImage:
-  artifactName: ${productName}-${version}-${arch}.${ext}
-npmRebuild: false
 publish:
-  provider: github
-  repo: cherry-studio
-  owner: kangfenmao
+  provider: generic
+  url: https://cherrystudio.ocool.online
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
+afterPack: scripts/after-pack.js
 afterSign: scripts/notarize.js
 releaseInfo:
   releaseNotes: |
-    支持聊天气泡样式和简洁样式切换
-    支持导出对话为 Word 文档
-    错误修复
+    新增快捷助手弹窗
+    翻译默认使用流输出
+    小程序弹窗顶部增加固定按钮 @ousugo
+    新增清除消息、清除上下文快捷键 @cljnnn
+    Gemini 安全设置更新 @magicdmer
+    智能体页面性能优化 @magicdmer
+    修复 WebDAV 不能自动备份问题
+    ⚠️ 如果不能自动更新，请手动下载安装包

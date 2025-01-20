@@ -1,36 +1,43 @@
-import AiAssistantAppLogo from '@renderer/assets/images/apps/360-ai.png'
-import AiSearchAppLogo from '@renderer/assets/images/apps/ai-search.png'
-import BaiduAiAppLogo from '@renderer/assets/images/apps/baidu-ai.png'
-import BaicuanAppLogo from '@renderer/assets/images/apps/baixiaoying.webp'
-import BoltAppLogo from '@renderer/assets/images/apps/bolt.svg'
-import DevvAppLogo from '@renderer/assets/images/apps/devv.png'
-import DoubaoAppLogo from '@renderer/assets/images/apps/doubao.png'
-import FeloAppLogo from '@renderer/assets/images/apps/felo.png'
-import GeminiAppLogo from '@renderer/assets/images/apps/gemini.png'
-import HuggingChatLogo from '@renderer/assets/images/apps/huggingchat.svg'
-import KimiAppLogo from '@renderer/assets/images/apps/kimi.jpg'
-import MetasoAppLogo from '@renderer/assets/images/apps/metaso.webp'
-import PerplexityAppLogo from '@renderer/assets/images/apps/perplexity.webp'
-import PoeAppLogo from '@renderer/assets/images/apps/poe.webp'
-import ZhipuProviderLogo from '@renderer/assets/images/apps/qingyan.png'
-import SensetimeAppLogo from '@renderer/assets/images/apps/sensetime.png'
-import SparkDeskAppLogo from '@renderer/assets/images/apps/sparkdesk.png'
-import TiangongAiLogo from '@renderer/assets/images/apps/tiangong.png'
-import WanZhiAppLogo from '@renderer/assets/images/apps/wanzhi.jpg'
-import TencentYuanbaoAppLogo from '@renderer/assets/images/apps/yuanbao.png'
-import YuewenAppLogo from '@renderer/assets/images/apps/yuewen.png'
-import ZhihuAppLogo from '@renderer/assets/images/apps/zhihu.png'
-import ClaudeAppLogo from '@renderer/assets/images/models/claude.png'
-import HailuoModelLogo from '@renderer/assets/images/models/hailuo.png'
-import QwenModelLogo from '@renderer/assets/images/models/qwen.png'
-import DeepSeekProviderLogo from '@renderer/assets/images/providers/deepseek.png'
-import GroqProviderLogo from '@renderer/assets/images/providers/groq.png'
-import OpenAiProviderLogo from '@renderer/assets/images/providers/openai.png'
-import SiliconFlowProviderLogo from '@renderer/assets/images/providers/silicon.png'
+import BaiduAiAppLogo from '@renderer/assets/images/apps/baidu-ai.png?url'
+import BaicuanAppLogo from '@renderer/assets/images/apps/baixiaoying.webp?url'
+import BoltAppLogo from '@renderer/assets/images/apps/bolt.svg?url'
+import DevvAppLogo from '@renderer/assets/images/apps/devv.png?url'
+import DoubaoAppLogo from '@renderer/assets/images/apps/doubao.png?url'
+import DuckDuckGoAppLogo from '@renderer/assets/images/apps/duckduckgo.webp?url'
+import FeloAppLogo from '@renderer/assets/images/apps/felo.png?url'
+import FlowithAppLogo from '@renderer/assets/images/apps/flowith.svg?url'
+import GeminiAppLogo from '@renderer/assets/images/apps/gemini.png?url'
+import GensparkLogo from '@renderer/assets/images/apps/genspark.jpg?url'
+import GithubCopilotLogo from '@renderer/assets/images/apps/github-copilot.webp?url'
+import GrokAppLogo from '@renderer/assets/images/apps/grok.png?url'
+import HikaLogo from '@renderer/assets/images/apps/hika.webp?url'
+import HuggingChatLogo from '@renderer/assets/images/apps/huggingchat.svg?url'
+import KimiAppLogo from '@renderer/assets/images/apps/kimi.jpg?url'
+import MetasoAppLogo from '@renderer/assets/images/apps/metaso.webp?url'
+import NamiAiSearchLogo from '@renderer/assets/images/apps/nm.webp?url'
+import PerplexityAppLogo from '@renderer/assets/images/apps/perplexity.webp?url'
+import PoeAppLogo from '@renderer/assets/images/apps/poe.webp?url'
+import ZhipuProviderLogo from '@renderer/assets/images/apps/qingyan.png?url'
+import QwenlmAppLogo from '@renderer/assets/images/apps/qwenlm.webp?url'
+import SensetimeAppLogo from '@renderer/assets/images/apps/sensetime.png?url'
+import SparkDeskAppLogo from '@renderer/assets/images/apps/sparkdesk.png?url'
+import ThinkAnyLogo from '@renderer/assets/images/apps/thinkany.webp?url'
+import TiangongAiLogo from '@renderer/assets/images/apps/tiangong.png?url'
+import WanZhiAppLogo from '@renderer/assets/images/apps/wanzhi.jpg?url'
+import TencentYuanbaoAppLogo from '@renderer/assets/images/apps/yuanbao.png?url'
+import YuewenAppLogo from '@renderer/assets/images/apps/yuewen.png?url'
+import ZhihuAppLogo from '@renderer/assets/images/apps/zhihu.png?url'
+import ClaudeAppLogo from '@renderer/assets/images/models/claude.png?url'
+import HailuoModelLogo from '@renderer/assets/images/models/hailuo.png?url'
+import QwenModelLogo from '@renderer/assets/images/models/qwen.png?url'
+import DeepSeekProviderLogo from '@renderer/assets/images/providers/deepseek.png?url'
+import GroqProviderLogo from '@renderer/assets/images/providers/groq.png?url'
+import OpenAiProviderLogo from '@renderer/assets/images/providers/openai.png?url'
+import SiliconFlowProviderLogo from '@renderer/assets/images/providers/silicon.png?url'
 import MinApp from '@renderer/components/MinApp'
 import { MinAppType } from '@renderer/types'
 
-const _apps: MinAppType[] = [
+export const DEFAULT_MIN_APPS: MinAppType[] = [
   {
     id: 'openai',
     name: 'ChatGPT',
@@ -119,19 +126,6 @@ const _apps: MinAppType[] = [
     logo: ClaudeAppLogo
   },
   {
-    id: '360-ai-so',
-    name: '360AI搜索',
-    logo: AiSearchAppLogo,
-    url: 'https://so.360.com/'
-  },
-  {
-    id: '360-ai-bot',
-    name: 'AI 助手',
-    logo: AiAssistantAppLogo,
-    url: 'https://bot.360.com/',
-    bodered: true
-  },
-  {
     id: 'baidu-ai-chat',
     name: '文心一言',
     logo: BaiduAiAppLogo,
@@ -210,19 +204,74 @@ const _apps: MinAppType[] = [
     bodered: true
   },
   {
+    id: 'duckduckgo',
+    name: 'DuckDuckGo',
+    logo: DuckDuckGoAppLogo,
+    url: 'https://duck.ai'
+  },
+  {
     id: 'bolt',
     name: 'bolt',
     logo: BoltAppLogo,
     url: 'https://bolt.new/',
     bodered: true
+  },
+  {
+    id: 'nm',
+    name: '纳米AI搜索',
+    logo: NamiAiSearchLogo,
+    url: 'https://www.n.cn/',
+    bodered: true
+  },
+  {
+    id: 'thinkany',
+    name: 'ThinkAny',
+    logo: ThinkAnyLogo,
+    url: 'https://thinkany.ai/',
+    bodered: true
+  },
+  {
+    id: 'hika',
+    name: 'Hika',
+    logo: HikaLogo,
+    url: 'https://hika.fyi/',
+    bodered: true
+  },
+  {
+    id: 'github-copilot',
+    name: 'GitHub Copilot',
+    logo: GithubCopilotLogo,
+    url: 'https://github.com/copilot'
+  },
+  {
+    id: 'genspark',
+    name: 'Genspark',
+    logo: GensparkLogo,
+    url: 'https://www.genspark.ai/'
+  },
+  {
+    id: 'grok',
+    name: 'Grok',
+    logo: GrokAppLogo,
+    url: 'https://grok.com',
+    bodered: true
+  },
+  {
+    id: 'qwenlm',
+    name: 'QwenLM',
+    logo: QwenlmAppLogo,
+    url: 'https://qwenlm.ai/'
+  },
+  {
+    id: 'flowith',
+    name: 'Flowith',
+    logo: FlowithAppLogo,
+    url: 'https://www.flowith.io/',
+    bodered: true
   }
 ]
 
-export function getAllMinApps() {
-  return _apps as MinAppType[]
-}
-
 export function startMinAppById(id: string) {
-  const app = getAllMinApps().find((app) => app?.id === id)
+  const app = DEFAULT_MIN_APPS.find((app) => app?.id === id)
   app && MinApp.start(app)
 }

@@ -31,21 +31,23 @@ const ProvidersList: FC = () => {
   }
 
   const onAddProvider = async () => {
-    const prividerName = await AddProviderPopup.show()
+    const { name: prividerName, type } = await AddProviderPopup.show()
 
-    if (!prividerName) {
+    if (!prividerName.trim()) {
       return
     }
 
     const provider = {
       id: uuid(),
-      name: prividerName,
+      name: prividerName.trim(),
+      type,
       apiKey: '',
       apiHost: '',
       models: [],
       enabled: true,
       isSystem: false
     } as Provider
+
     addProvider(provider)
     setSelectedProvider(provider)
   }
@@ -57,8 +59,8 @@ const ProvidersList: FC = () => {
         key: 'edit',
         icon: <EditOutlined />,
         async onClick() {
-          const name = await AddProviderPopup.show(provider)
-          name && updateProvider({ ...provider, name })
+          const { name, type } = await AddProviderPopup.show(provider)
+          name && updateProvider({ ...provider, name, type })
         }
       },
       {
@@ -122,7 +124,7 @@ const ProvidersList: FC = () => {
                                   {provider.isSystem ? t(`provider.${provider.id}`) : provider.name}
                                 </ProviderItemName>
                                 {provider.enabled && (
-                                  <Tag color="green" style={{ marginLeft: 'auto' }}>
+                                  <Tag color="green" style={{ marginLeft: 'auto', marginRight: 0, borderRadius: 16 }}>
                                     ON
                                   </Tag>
                                 )}
@@ -140,7 +142,9 @@ const ProvidersList: FC = () => {
         </Scrollbar>
         {!dragging && (
           <AddButtonWrapper>
-            <Button type="dashed" style={{ width: '100%' }} icon={<PlusOutlined />} onClick={onAddProvider} />
+            <Button style={{ width: '100%' }} icon={<PlusOutlined />} onClick={onAddProvider}>
+              {t('button.add')}
+            </Button>
           </AddButtonWrapper>
         )}
       </ProviderListContainer>
@@ -159,7 +163,7 @@ const Container = styled.div`
 const ProviderListContainer = styled.div`
   display: flex;
   flex-direction: column;
-  width: var(--assistants-width);
+  min-width: calc(var(--settings-width) + 10px);
   height: calc(100vh - var(--navbar-height));
   border-right: 0.5px solid var(--color-border);
 `
@@ -169,23 +173,26 @@ const ProviderList = styled.div`
   flex: 1;
   flex-direction: column;
   padding: 8px;
+  padding-right: 5px;
 `
 
 const ProviderListItem = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 5px 8px;
+  padding: 5px 10px;
   width: 100%;
-  cursor: pointer;
-  border-radius: 5px;
+  cursor: grab;
+  border-radius: var(--list-item-border-radius);
   font-size: 14px;
   transition: all 0.2s ease-in-out;
+  border: 0.5px solid transparent;
   &:hover {
     background: var(--color-background-soft);
   }
   &.active {
-    background: var(--color-background-mute);
+    background: var(--color-background-soft);
+    border: 0.5px solid var(--color-border);
     font-weight: bold !important;
   }
 `

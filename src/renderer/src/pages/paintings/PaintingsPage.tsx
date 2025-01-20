@@ -1,4 +1,4 @@
-import { PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons'
+import { PlusOutlined, QuestionCircleOutlined, RedoOutlined } from '@ant-design/icons'
 import ImageSize1_1 from '@renderer/assets/images/paintings/image-size-1-1.svg'
 import ImageSize1_2 from '@renderer/assets/images/paintings/image-size-1-2.svg'
 import ImageSize3_2 from '@renderer/assets/images/paintings/image-size-3-2.svg'
@@ -6,7 +6,7 @@ import ImageSize3_4 from '@renderer/assets/images/paintings/image-size-3-4.svg'
 import ImageSize9_16 from '@renderer/assets/images/paintings/image-size-9-16.svg'
 import ImageSize16_9 from '@renderer/assets/images/paintings/image-size-16-9.svg'
 import { Navbar, NavbarCenter, NavbarRight } from '@renderer/components/app/Navbar'
-import { VStack } from '@renderer/components/Layout'
+import { HStack, VStack } from '@renderer/components/Layout'
 import Scrollbar from '@renderer/components/Scrollbar'
 import TranslateButton from '@renderer/components/TranslateButton'
 import { isMac } from '@renderer/config/constant'
@@ -15,17 +15,19 @@ import { useTheme } from '@renderer/context/ThemeProvider'
 import { usePaintings } from '@renderer/hooks/usePaintings'
 import { useAllProviders } from '@renderer/hooks/useProvider'
 import { useRuntime } from '@renderer/hooks/useRuntime'
+import { useSettings } from '@renderer/hooks/useSettings'
 import AiProvider from '@renderer/providers/AiProvider'
 import { getProviderByModel } from '@renderer/services/AssistantService'
 import FileManager from '@renderer/services/FileManager'
+import { translateText } from '@renderer/services/TranslateService'
 import { useAppDispatch } from '@renderer/store'
 import { DEFAULT_PAINTING } from '@renderer/store/paintings'
 import { setGenerating } from '@renderer/store/runtime'
 import { FileType, Painting } from '@renderer/types'
 import { getErrorMessage } from '@renderer/utils'
-import { Button, Input, InputNumber, Radio, Select, Slider, Tooltip } from 'antd'
+import { Button, Input, InputNumber, Radio, Select, Slider, Switch, Tooltip } from 'antd'
 import TextArea from 'antd/es/input/TextArea'
-import { FC, useRef, useState } from 'react'
+import { FC, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -107,7 +109,7 @@ const PaintingsPage: FC = () => {
   const onGenerate = async () => {
     if (painting.files.length > 0) {
       const confirmed = await window.modal.confirm({
-        content: t('images.regenerate.confirm'),
+        content: t('paintings.regenerate.confirm'),
         centered: true
       })
 
@@ -147,8 +149,13 @@ const PaintingsPage: FC = () => {
     dispatch(setGenerating(true))
     const AI = new AiProvider(provider)
 
+    if (!painting.model) {
+      return
+    }
+
     try {
       const urls = await AI.generateImage({
+        model: painting.model,
         prompt,
         negativePrompt: painting.negativePrompt || '',
         imageSize: painting.imageSize || '1024x1024',
@@ -156,7 +163,8 @@ const PaintingsPage: FC = () => {
         seed: painting.seed || undefined,
         numInferenceSteps: painting.steps || 25,
         guidanceScale: painting.guidanceScale || 4.5,
-        signal: controller.signal
+        signal: controller.signal,
+        promptEnhancement: painting.promptEnhancement || false
       })
 
       if (urls.length > 0) {
@@ -232,31 +240,67 @@ const PaintingsPage: FC = () => {
     setCurrentImageIndex(0)
   }
 
-  const handleTranslation = async (translatedText: string) => {
-    const currentText = textareaRef.current?.resizableTextArea?.textArea?.value
+  const { autoTranslateWithSpace } = useSettings()
+  const [spaceClickCount, setSpaceClickCount] = useState(0)
+  const [isTranslating, setIsTranslating] = useState(false)
+  const spaceClickTimer = useRef<NodeJS.Timeout>()
 
-    if (currentText) {
-      await navigator.clipboard.writeText(currentText)
+  const translate = async () => {
+    if (isTranslating) {
+      return
+    }
 
-      const confirmed = await window.modal.confirm({
-        content: t('translate.confirm'),
-        centered: true
-      })
+    if (!painting.prompt) {
+      return
+    }
 
-      if (confirmed) {
-        updatePaintingState({ prompt: translatedText })
+    try {
+      setIsTranslating(true)
+      const translatedText = await translateText(painting.prompt, 'english')
+      updatePaintingState({ prompt: translatedText })
+    } catch (error) {
+      console.error('Translation failed:', error)
+    } finally {
+      setIsTranslating(false)
+    }
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (autoTranslateWithSpace && event.key === ' ') {
+      setSpaceClickCount((prev) => prev + 1)
+
+      if (spaceClickTimer.current) {
+        clearTimeout(spaceClickTimer.current)
+      }
+
+      spaceClickTimer.current = setTimeout(() => {
+        setSpaceClickCount(0)
+      }, 200)
+
+      if (spaceClickCount === 2) {
+        setSpaceClickCount(0)
+        setIsTranslating(true)
+        translate()
       }
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (spaceClickTimer.current) {
+        clearTimeout(spaceClickTimer.current)
+      }
+    }
+  }, [])
+
   return (
     <Container>
       <Navbar>
-        <NavbarCenter style={{ borderRight: 'none' }}>{t('images.title')}</NavbarCenter>
+        <NavbarCenter style={{ borderRight: 'none' }}>{t('paintings.title')}</NavbarCenter>
         {isMac && (
           <NavbarRight style={{ justifyContent: 'flex-end' }}>
             <Button size="small" className="nodrag" icon={<PlusOutlined />} onClick={() => setPainting(addPainting())}>
-              {t('images.button.new.image')}
+              {t('paintings.button.new.image')}
             </Button>
           </NavbarRight>
         )}
@@ -267,11 +311,11 @@ const PaintingsPage: FC = () => {
           <Select
             value={siliconProvider.id}
             disabled={true}
-            options={[{ label: siliconProvider.name, value: siliconProvider.id }]}
+            options={[{ label: t(`provider.${siliconProvider.id}`), value: siliconProvider.id }]}
           />
           <SettingTitle style={{ marginBottom: 5, marginTop: 15 }}>{t('common.model')}</SettingTitle>
           <Select value={painting.model} options={modelOptions} onChange={onSelectModel} />
-          <SettingTitle style={{ marginBottom: 5, marginTop: 15 }}>{t('images.image.size')}</SettingTitle>
+          <SettingTitle style={{ marginBottom: 5, marginTop: 15 }}>{t('paintings.image.size')}</SettingTitle>
           <Radio.Group
             value={painting.imageSize}
             onChange={(e) => onSelectImageSize(e.target.value)}
@@ -287,8 +331,8 @@ const PaintingsPage: FC = () => {
           </Radio.Group>
 
           <SettingTitle style={{ marginBottom: 5, marginTop: 15 }}>
-            {t('images.number_images')}
-            <Tooltip title={t('images.number_images_tip')}>
+            {t('paintings.number_images')}
+            <Tooltip title={t('paintings.number_images_tip')}>
               <InfoIcon />
             </Tooltip>
           </SettingTitle>
@@ -300,63 +344,84 @@ const PaintingsPage: FC = () => {
           />
 
           <SettingTitle style={{ marginBottom: 5, marginTop: 15 }}>
-            {t('images.seed')}
-            <Tooltip title={t('images.seed_tip')}>
+            {t('paintings.seed')}
+            <Tooltip title={t('paintings.seed_tip')}>
               <InfoIcon />
             </Tooltip>
           </SettingTitle>
           <Input
             value={painting.seed}
             onChange={(e) => updatePaintingState({ seed: e.target.value })}
-            suffix={<RefreshIcon onClick={() => updatePaintingState({ seed: '' })} />}
+            suffix={
+              <RedoOutlined
+                onClick={() => updatePaintingState({ seed: Math.floor(Math.random() * 1000000).toString() })}
+                style={{ cursor: 'pointer', color: 'var(--color-text-2)' }}
+              />
+            }
           />
 
           <SettingTitle style={{ marginBottom: 5, marginTop: 15 }}>
-            {t('images.inference_steps')}
-            <Tooltip title={t('images.inference_steps_tip')}>
+            {t('paintings.inference_steps')}
+            <Tooltip title={t('paintings.inference_steps_tip')}>
               <InfoIcon />
             </Tooltip>
           </SettingTitle>
-          <Slider min={1} max={50} value={painting.steps} onChange={(v) => updatePaintingState({ steps: v })} />
-          <InputNumber
-            min={1}
-            max={50}
-            value={painting.steps}
-            onChange={(v) => updatePaintingState({ steps: v || 25 })}
-          />
+          <SliderContainer>
+            <Slider min={1} max={50} value={painting.steps} onChange={(v) => updatePaintingState({ steps: v })} />
+            <StyledInputNumber
+              min={1}
+              max={50}
+              value={painting.steps}
+              onChange={(v) => updatePaintingState({ steps: (v as number) || 25 })}
+            />
+          </SliderContainer>
 
           <SettingTitle style={{ marginBottom: 5, marginTop: 15 }}>
-            {t('images.guidance_scale')}
-            <Tooltip title={t('images.guidance_scale_tip')}>
+            {t('paintings.guidance_scale')}
+            <Tooltip title={t('paintings.guidance_scale_tip')}>
               <InfoIcon />
             </Tooltip>
           </SettingTitle>
-          <Slider
-            min={1}
-            max={20}
-            step={0.1}
-            value={painting.guidanceScale}
-            onChange={(v) => updatePaintingState({ guidanceScale: v })}
-          />
-          <InputNumber
-            min={1}
-            max={20}
-            step={0.1}
-            value={painting.guidanceScale}
-            onChange={(v) => updatePaintingState({ guidanceScale: v || 4.5 })}
-          />
-
+          <SliderContainer>
+            <Slider
+              min={1}
+              max={20}
+              step={0.1}
+              value={painting.guidanceScale}
+              onChange={(v) => updatePaintingState({ guidanceScale: v })}
+            />
+            <StyledInputNumber
+              min={1}
+              max={20}
+              step={0.1}
+              value={painting.guidanceScale}
+              onChange={(v) => updatePaintingState({ guidanceScale: (v as number) || 4.5 })}
+            />
+          </SliderContainer>
           <SettingTitle style={{ marginBottom: 5, marginTop: 15 }}>
-            {t('images.negative_prompt')}
-            <Tooltip title={t('images.negative_prompt_tip')}>
+            {t('paintings.negative_prompt')}
+            <Tooltip title={t('paintings.negative_prompt_tip')}>
               <InfoIcon />
             </Tooltip>
           </SettingTitle>
           <TextArea
             value={painting.negativePrompt}
             onChange={(e) => updatePaintingState({ negativePrompt: e.target.value })}
+            spellCheck={false}
             rows={4}
           />
+          <SettingTitle style={{ marginBottom: 5, marginTop: 15 }}>
+            {t('paintings.prompt_enhancement')}
+            <Tooltip title={t('paintings.prompt_enhancement_tip')}>
+              <InfoIcon />
+            </Tooltip>
+          </SettingTitle>
+          <HStack>
+            <Switch
+              checked={painting.promptEnhancement}
+              onChange={(checked) => updatePaintingState({ promptEnhancement: checked })}
+            />
+          </HStack>
         </LeftContainer>
         <MainContainer>
           <Artboard
@@ -373,15 +438,18 @@ const PaintingsPage: FC = () => {
               variant="borderless"
               disabled={isLoading}
               value={painting.prompt}
+              spellCheck={false}
               onChange={(e) => updatePaintingState({ prompt: e.target.value })}
-              placeholder={t('images.prompt_placeholder')}
+              placeholder={isTranslating ? t('paintings.translating') : t('paintings.prompt_placeholder')}
+              onKeyDown={handleKeyDown}
             />
             <Toolbar>
               <ToolbarMenu>
                 <TranslateButton
                   text={textareaRef.current?.resizableTextArea?.textArea?.value}
-                  onTranslated={handleTranslation}
-                  disabled={isLoading}
+                  onTranslated={(translatedText) => updatePaintingState({ prompt: translatedText })}
+                  disabled={isLoading || isTranslating}
+                  isLoading={isTranslating}
                   style={{ marginRight: 6, borderRadius: '50%' }}
                 />
                 <SendMessageButton sendMessage={onGenerate} disabled={isLoading} />
@@ -442,8 +510,10 @@ const InputContainer = styled.div`
   min-height: 95px;
   max-height: 95px;
   position: relative;
-  border-top: 1px solid var(--color-border-soft);
+  border: 1px solid var(--color-border-soft);
   transition: all 0.3s ease;
+  margin: 0 20px 15px 20px;
+  border-radius: 10px;
 `
 
 const Textarea = styled(TextArea)`
@@ -500,8 +570,18 @@ const InfoIcon = styled(QuestionCircleOutlined)`
   }
 `
 
-const RefreshIcon = styled.span`
-  cursor: pointer;
+const SliderContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  .ant-slider {
+    flex: 1;
+  }
+`
+
+const StyledInputNumber = styled(InputNumber)`
+  width: 70px;
 `
 
 export default PaintingsPage

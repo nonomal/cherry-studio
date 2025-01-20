@@ -1,53 +1,147 @@
+import { Shortcut } from '@types'
 import { BrowserWindow, globalShortcut } from 'electron'
+import Logger from 'electron-log'
 
-export function registerZoomShortcut(mainWindow: BrowserWindow) {
-  const registerShortcuts = () => {
-    // 注册放大快捷键 (Ctrl+Plus 或 Cmd+Plus)
-    globalShortcut.register('CommandOrControl+=', () => {
-      if (mainWindow) {
-        const currentZoom = mainWindow.webContents.getZoomFactor()
-        const newZoom = currentZoom + 0.1
-        // Prevent zoom factor from exceeding reasonable limits
-        if (newZoom <= 5.0) {
-          mainWindow.webContents.setZoomFactor(newZoom)
+import { configManager } from './ConfigManager'
+import { windowService } from './WindowService'
+
+let showAppAccelerator: string | null = null
+let showMiniWindowAccelerator: string | null = null
+
+function getShortcutHandler(shortcut: Shortcut) {
+  switch (shortcut.key) {
+    case 'zoom_in':
+      return (window: BrowserWindow) => handleZoom(0.1)(window)
+    case 'zoom_out':
+      return (window: BrowserWindow) => handleZoom(-0.1)(window)
+    case 'zoom_reset':
+      return (window: BrowserWindow) => {
+        window.webContents.setZoomFactor(1)
+        configManager.setZoomFactor(1)
+      }
+    case 'show_app':
+      return (window: BrowserWindow) => {
+        if (window.isVisible()) {
+          window.hide()
+        } else {
+          window.show()
+          window.focus()
         }
       }
-    })
-
-    // 注册缩小快捷键 (Ctrl+Minus 或 Cmd+Minus)
-    globalShortcut.register('CommandOrControl+-', () => {
-      if (mainWindow) {
-        const currentZoom = mainWindow.webContents.getZoomFactor()
-        const newZoom = currentZoom - 0.1
-        // Prevent zoom factor from going below 0.1
-        if (newZoom >= 0.1) {
-          mainWindow.webContents.setZoomFactor(newZoom)
-        }
+    case 'mini_window':
+      return () => {
+        windowService.toggleMiniWindow()
       }
-    })
+    default:
+      return null
+  }
+}
 
-    // 注册重置缩放快捷键 (Ctrl+0 或 Cmd+0)
-    globalShortcut.register('CommandOrControl+0', () => {
-      if (mainWindow) {
-        mainWindow.webContents.setZoomFactor(1)
+function formatShortcutKey(shortcut: string[]): string {
+  return shortcut.join('+')
+}
+
+function handleZoom(delta: number) {
+  return (window: BrowserWindow) => {
+    const currentZoom = window.webContents.getZoomFactor()
+    const newZoom = currentZoom + delta
+    if (newZoom >= 0.1 && newZoom <= 5.0) {
+      window.webContents.setZoomFactor(newZoom)
+      configManager.setZoomFactor(newZoom)
+    }
+  }
+}
+
+export function registerShortcuts(window: BrowserWindow) {
+  window.webContents.setZoomFactor(configManager.getZoomFactor())
+
+  const register = () => {
+    if (window.isDestroyed()) return
+
+    const shortcuts = configManager.getShortcuts()
+    if (!shortcuts) return
+
+    shortcuts.forEach((shortcut) => {
+      try {
+        if (shortcut.shortcut.length === 0) {
+          return
+        }
+
+        const handler = getShortcutHandler(shortcut)
+
+        if (!handler) {
+          return
+        }
+
+        const accelerator = formatShortcutKey(shortcut.shortcut)
+
+        if (shortcut.key === 'show_app') {
+          showAppAccelerator = accelerator
+        }
+
+        if (shortcut.key === 'mini_window') {
+          showMiniWindowAccelerator = accelerator
+        }
+
+        if (shortcut.key.includes('zoom')) {
+          switch (shortcut.key) {
+            case 'zoom_in':
+              globalShortcut.register('CommandOrControl+=', () => shortcut.enabled && handler(window))
+              globalShortcut.register('CommandOrControl+numadd', () => shortcut.enabled && handler(window))
+              return
+            case 'zoom_out':
+              globalShortcut.register('CommandOrControl+-', () => shortcut.enabled && handler(window))
+              globalShortcut.register('CommandOrControl+numsub', () => shortcut.enabled && handler(window))
+              return
+            case 'zoom_reset':
+              globalShortcut.register('CommandOrControl+0', () => shortcut.enabled && handler(window))
+              return
+          }
+        }
+
+        if (shortcut.enabled) {
+          globalShortcut.register(formatShortcutKey(shortcut.shortcut), () => handler(window))
+        }
+      } catch (error) {
+        Logger.error(`[ShortcutService] Failed to register shortcut ${shortcut.key}`)
       }
     })
   }
 
-  const unregisterShortcuts = () => {
-    globalShortcut.unregister('CommandOrControl+=')
-    globalShortcut.unregister('CommandOrControl+-')
-    globalShortcut.unregister('CommandOrControl+0')
+  const unregister = () => {
+    if (window.isDestroyed()) return
+
+    try {
+      globalShortcut.unregisterAll()
+
+      if (showAppAccelerator) {
+        const handler = getShortcutHandler({ key: 'show_app' } as Shortcut)
+        handler && globalShortcut.register(showAppAccelerator, () => handler(window))
+      }
+
+      if (showMiniWindowAccelerator) {
+        const handler = getShortcutHandler({ key: 'mini_window' } as Shortcut)
+        handler && globalShortcut.register(showMiniWindowAccelerator, () => handler(window))
+      }
+    } catch (error) {
+      Logger.error('[ShortcutService] Failed to unregister shortcuts')
+    }
   }
 
-  // 当窗口获得焦点时注册快捷键
-  mainWindow.on('focus', registerShortcuts)
+  window.on('focus', () => register())
+  window.on('blur', () => unregister())
 
-  // 当窗口失去焦点时注销快捷键
-  mainWindow.on('blur', unregisterShortcuts)
+  if (!window.isDestroyed() && window.isFocused()) {
+    register()
+  }
+}
 
-  // 初始注册（如果窗口已经处于焦点状态）
-  if (mainWindow.isFocused()) {
-    registerShortcuts()
+export function unregisterAllShortcuts() {
+  try {
+    showAppAccelerator = null
+    showMiniWindowAccelerator = null
+    globalShortcut.unregisterAll()
+  } catch (error) {
+    Logger.error('[ShortcutService] Failed to unregister all shortcuts')
   }
 }

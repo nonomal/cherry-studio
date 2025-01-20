@@ -11,14 +11,19 @@ import FireworksProviderLogo from '@renderer/assets/images/providers/fireworks.p
 import GithubProviderLogo from '@renderer/assets/images/providers/github.png'
 import GoogleProviderLogo from '@renderer/assets/images/providers/google.png'
 import GraphRagProviderLogo from '@renderer/assets/images/providers/graph-rag.png'
+import GrokProviderLogo from '@renderer/assets/images/providers/grok.png'
 import GroqProviderLogo from '@renderer/assets/images/providers/groq.png'
+import HyperbolicProviderLogo from '@renderer/assets/images/providers/hyperbolic.png'
+import JinaProviderLogo from '@renderer/assets/images/providers/jina.png'
 import MinimaxProviderLogo from '@renderer/assets/images/providers/minimax.png'
+import MistralProviderLogo from '@renderer/assets/images/providers/mistral.png'
 import MoonshotProviderLogo from '@renderer/assets/images/providers/moonshot.png'
 import NvidiaProviderLogo from '@renderer/assets/images/providers/nvidia.png'
 import OcoolAiProviderLogo from '@renderer/assets/images/providers/ocoolai.png'
 import OllamaProviderLogo from '@renderer/assets/images/providers/ollama.png'
 import OpenAiProviderLogo from '@renderer/assets/images/providers/openai.png'
 import OpenRouterProviderLogo from '@renderer/assets/images/providers/openrouter.png'
+import QwenLMProviderLogo from '@renderer/assets/images/providers/qwenlm.png'
 import SiliconFlowProviderLogo from '@renderer/assets/images/providers/silicon.png'
 import StepProviderLogo from '@renderer/assets/images/providers/step.png'
 import TogetherProviderLogo from '@renderer/assets/images/providers/together.png'
@@ -79,6 +84,16 @@ export function getProviderLogo(providerId: string) {
       return AzureProviderLogo
     case 'hunyuan':
       return HunyuanProviderLogo
+    case 'grok':
+      return GrokProviderLogo
+    case 'hyperbolic':
+      return HyperbolicProviderLogo
+    case 'mistral':
+      return MistralProviderLogo
+    case 'jina':
+      return JinaProviderLogo
+    case 'qwenlm':
+      return QwenLMProviderLogo
     default:
       return undefined
   }
@@ -298,13 +313,56 @@ export const PROVIDER_CONFIG = {
       models: 'https://docs.anthropic.com/en/docs/about-claude/models'
     }
   },
-  aihubmix: {
+  grok: {
     api: {
-      url: 'https://aihubmix.com'
+      url: 'https://api.x.ai'
     },
     websites: {
-      official: 'https://aihubmix.com/',
-      apiKey: 'https://aihubmix.com/token',
+      official: 'https://x.ai/',
+      docs: 'https://docs.x.ai/',
+      models: 'https://docs.x.ai/docs#getting-started'
+    }
+  },
+  hyperbolic: {
+    api: {
+      url: 'https://api.hyperbolic.xyz'
+    },
+    websites: {
+      official: 'https://app.hyperbolic.xyz',
+      apiKey: 'https://app.hyperbolic.xyz/settings',
+      docs: 'https://docs.hyperbolic.xyz',
+      models: 'https://app.hyperbolic.xyz/models'
+    }
+  },
+  mistral: {
+    api: {
+      url: 'https://api.mistral.ai'
+    },
+    websites: {
+      official: 'https://mistral.ai',
+      apiKey: 'https://console.mistral.ai/api-keys/',
+      docs: 'https://docs.mistral.ai',
+      models: 'https://docs.mistral.ai/getting-started/models/models_overview'
+    }
+  },
+  jina: {
+    api: {
+      url: 'https://api.jina.ai'
+    },
+    websites: {
+      official: 'https://jina.ai',
+      apiKey: 'https://jina.ai/',
+      docs: 'https://jina.ai',
+      models: 'https://jina.ai'
+    }
+  },
+  aihubmix: {
+    api: {
+      url: 'https://aihubmix.com?aff=SJyh'
+    },
+    websites: {
+      official: 'https://aihubmix.com?aff=SJyh',
+      apiKey: 'https://aihubmix.com?aff=SJyh',
       docs: 'https://doc.aihubmix.com/',
       models: 'https://aihubmix.com/models'
     }
@@ -347,7 +405,7 @@ export const PROVIDER_CONFIG = {
       url: 'https://integrate.api.nvidia.com'
     },
     websites: {
-      official: 'https://ai.360.com/',
+      official: 'https://build.nvidia.com/explore/discover',
       apiKey: 'https://build.nvidia.com/meta/llama-3_1-405b-instruct',
       docs: 'https://docs.api.nvidia.com/nim/reference/llm-apis',
       models: 'https://build.nvidia.com/nim'
@@ -362,6 +420,17 @@ export const PROVIDER_CONFIG = {
       apiKey: 'https://portal.azure.com/#view/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/~/OpenAI',
       docs: 'https://learn.microsoft.com/en-us/azure/ai-services/openai/',
       models: 'https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models'
+    }
+  },
+  qwenlm: {
+    api: {
+      url: 'https://chat.qwenlm.ai/api/'
+    },
+    websites: {
+      official: 'https://chat.qwenlm.ai',
+      apiKey: 'https://chat.qwenlm.ai',
+      docs: 'https://chat.qwenlm.ai',
+      models: 'https://chat.qwenlm.ai'
     }
   }
 }

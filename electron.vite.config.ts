@@ -1,14 +1,40 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { resolve } from 'path'
+import { visualizer } from 'rollup-plugin-visualizer'
+
+const visualizerPlugin = (type: 'renderer' | 'main') => {
+  return process.env[`VISUALIZER_${type.toUpperCase()}`] ? [visualizer({ open: true })] : []
+}
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: [
+          '@llm-tools/embedjs',
+          '@llm-tools/embedjs-openai',
+          '@llm-tools/embedjs-loader-web',
+          '@llm-tools/embedjs-loader-markdown',
+          '@llm-tools/embedjs-loader-msoffice',
+          '@llm-tools/embedjs-loader-xml',
+          '@llm-tools/embedjs-loader-pdf',
+          '@llm-tools/embedjs-loader-sitemap',
+          '@llm-tools/embedjs-libsql'
+        ]
+      }),
+      ...visualizerPlugin('main')
+    ],
     resolve: {
       alias: {
+        '@main': resolve('src/main'),
         '@types': resolve('src/renderer/src/types'),
-        '@main': resolve('src/main')
+        '@shared': resolve('packages/shared')
+      }
+    },
+    build: {
+      rollupOptions: {
+        external: ['@libsql/client']
       }
     }
   },
@@ -16,11 +42,15 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
+    plugins: [react(), ...visualizerPlugin('renderer')],
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
+        '@renderer': resolve('src/renderer/src'),
+        '@shared': resolve('packages/shared')
       }
     },
-    plugins: [react()]
+    optimizeDeps: {
+      exclude: ['chunk-RK3FTE5R.js']
+    }
   }
 })

@@ -75,16 +75,20 @@ export const compressImage = async (file: File) => {
 // Converts 'gpt-3.5-turbo-16k-0613' to 'GPT-3.5-Turbo'
 // Converts 'qwen2:1.5b' to 'QWEN2'
 export const getDefaultGroupName = (id: string) => {
+  if (id.includes('/')) {
+    return id.split('/')[0]
+  }
+
   if (id.includes(':')) {
-    return id.split(':')[0].toUpperCase()
+    return id.split(':')[0]
   }
 
   if (id.includes('-')) {
     const parts = id.split('-')
-    return parts[0].toUpperCase() + '-' + parts[1].toUpperCase()
+    return parts[0] + '-' + parts[1]
   }
 
-  return id.toUpperCase()
+  return id
 }
 
 export function droppableReorder<T>(list: T[], startIndex: number, endIndex: number, len = 1) {
@@ -146,6 +150,11 @@ export function getErrorMessage(error: any) {
 
 export function removeQuotes(str) {
   return str.replace(/['"]+/g, '')
+}
+
+export function removeSpecialCharacters(str: string) {
+  // First remove newlines and quotes, then remove other special characters
+  return str.replace(/[\n"]/g, '').replace(/[\p{M}\p{N}\p{P}\p{S}]/gu, '')
 }
 
 export function generateColorFromChar(char: string) {
@@ -264,7 +273,7 @@ export const captureScrollableDiv = async (divRef: React.RefObject<HTMLDivElemen
     try {
       const div = divRef.current
 
-      // 保存原始样式
+      // Save original styles
       const originalStyle = {
         height: div.style.height,
         maxHeight: div.style.maxHeight,
@@ -274,19 +283,38 @@ export const captureScrollableDiv = async (divRef: React.RefObject<HTMLDivElemen
 
       const originalScrollTop = div.scrollTop
 
-      // 修改样式以显示全部内容
+      // Modify styles to show full content
       div.style.height = 'auto'
       div.style.maxHeight = 'none'
       div.style.overflow = 'visible'
       div.style.position = 'static'
 
-      // 捕获整个内容
+      // Configure html2canvas options
       const canvas = await html2canvas(div, {
         scrollY: -window.scrollY,
-        windowHeight: document.documentElement.scrollHeight
+        windowHeight: document.documentElement.scrollHeight,
+        useCORS: true, // Allow cross-origin images
+        allowTaint: true, // Allow cross-origin images
+        logging: false, // Disable logging
+        imageTimeout: 0, // Disable image timeout
+        onclone: (clonedDoc) => {
+          // Ensure all images in cloned document are loaded
+          const images = clonedDoc.getElementsByTagName('img')
+          return Promise.all(
+            Array.from(images).map((img) => {
+              if (img.complete) {
+                return Promise.resolve()
+              }
+              return new Promise((resolve) => {
+                img.onload = resolve
+                img.onerror = resolve
+              })
+            })
+          )
+        }
       })
 
-      // 恢复原始样式
+      // Restore original styles
       div.style.height = originalStyle.height
       div.style.maxHeight = originalStyle.maxHeight
       div.style.overflow = originalStyle.overflow
@@ -294,7 +322,7 @@ export const captureScrollableDiv = async (divRef: React.RefObject<HTMLDivElemen
 
       const imageData = canvas.toDataURL('image/png')
 
-      // 恢复原始滚动位置
+      // Restore original scroll position
       setTimeout(() => {
         div.scrollTop = originalScrollTop
       }, 0)
@@ -338,6 +366,23 @@ export function sortByEnglishFirst(a: string, b: string) {
   if (isAEnglish && !isBEnglish) return -1
   if (!isAEnglish && isBEnglish) return 1
   return a.localeCompare(b)
+}
+
+export const compareVersions = (v1: string, v2: string): number => {
+  const v1Parts = v1.split('.').map(Number)
+  const v2Parts = v2.split('.').map(Number)
+
+  for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
+    const v1Part = v1Parts[i] || 0
+    const v2Part = v2Parts[i] || 0
+    if (v1Part > v2Part) return 1
+    if (v1Part < v2Part) return -1
+  }
+  return 0
+}
+
+export function isMiniWindow() {
+  return window.location.hash === '#/mini'
 }
 
 export { classNames }

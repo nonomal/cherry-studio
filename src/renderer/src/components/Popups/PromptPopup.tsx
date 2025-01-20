@@ -1,4 +1,5 @@
-import { Input, InputProps, Modal } from 'antd'
+import { Input, Modal } from 'antd'
+import { TextAreaProps } from 'antd/es/input'
 import { useState } from 'react'
 
 import { Box } from '../Layout'
@@ -9,11 +10,11 @@ interface PromptPopupShowParams {
   message: string
   defaultValue?: string
   inputPlaceholder?: string
-  inputProps?: InputProps
+  inputProps?: TextAreaProps
 }
 
 interface Props extends PromptPopupShowParams {
-  resolve: (value: string) => void
+  resolve: (value: any) => void
 }
 
 const PromptPopupContainer: React.FC<Props> = ({
@@ -29,36 +30,42 @@ const PromptPopupContainer: React.FC<Props> = ({
 
   const onOk = () => {
     setOpen(false)
+    resolve(value)
   }
 
-  const handleCancel = () => {
+  const onCancel = () => {
     setOpen(false)
   }
 
   const onClose = () => {
-    resolve(value)
+    resolve(null)
   }
 
+  PromptPopup.hide = onCancel
+
   return (
-    <Modal title={title} open={open} onOk={onOk} onCancel={handleCancel} afterClose={onClose} centered>
+    <Modal title={title} open={open} onOk={onOk} onCancel={onCancel} afterClose={onClose} centered>
       <Box mb={8}>{message}</Box>
-      <Input
+      <Input.TextArea
         placeholder={inputPlaceholder}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         allowClear
         autoFocus
         onPressEnter={onOk}
+        rows={1}
         {...inputProps}
       />
     </Modal>
   )
 }
 
+const TopViewKey = 'PromptPopup'
+
 export default class PromptPopup {
   static topviewId = 0
   static hide() {
-    TopView.hide('PromptPopup')
+    TopView.hide(TopViewKey)
   }
   static show(props: PromptPopupShowParams) {
     return new Promise<string>((resolve) => {
@@ -67,7 +74,7 @@ export default class PromptPopup {
           {...props}
           resolve={(v) => {
             resolve(v)
-            this.hide()
+            TopView.hide(TopViewKey)
           }}
         />,
         'PromptPopup'

@@ -1,14 +1,19 @@
-import { FormOutlined } from '@ant-design/icons'
+import { FormOutlined, SearchOutlined } from '@ant-design/icons'
 import { Navbar, NavbarLeft, NavbarRight } from '@renderer/components/app/Navbar'
-import AssistantSettingsPopup from '@renderer/components/AssistantSettings'
 import { HStack } from '@renderer/components/Layout'
+import MinAppsPopover from '@renderer/components/Popups/MinAppsPopover'
+import SearchPopup from '@renderer/components/Popups/SearchPopup'
 import { isMac, isWindows } from '@renderer/config/constant'
 import { useAssistant } from '@renderer/hooks/useAssistant'
 import { useSettings } from '@renderer/hooks/useSettings'
+import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { useShowAssistants, useShowTopics } from '@renderer/hooks/useStore'
+import AssistantSettingsPopup from '@renderer/pages/settings/AssistantSettings'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import { useAppDispatch } from '@renderer/store'
+import { setNarrowMode } from '@renderer/store/settings'
 import { Assistant, Topic } from '@renderer/types'
-import { FC, useCallback } from 'react'
+import { FC } from 'react'
 import styled from 'styled-components'
 
 import SelectModelButton from './components/SelectModelButton'
@@ -22,34 +27,46 @@ interface Props {
 const HeaderNavbar: FC<Props> = ({ activeAssistant }) => {
   const { assistant } = useAssistant(activeAssistant.id)
   const { showAssistants, toggleShowAssistants } = useShowAssistants()
-  const { topicPosition } = useSettings()
+  const { topicPosition, sidebarIcons, narrowMode } = useSettings()
   const { showTopics, toggleShowTopics } = useShowTopics()
+  const dispatch = useAppDispatch()
 
-  const addNewTopic = useCallback(() => {
-    EventEmitter.emit(EVENT_NAMES.ADD_NEW_TOPIC)
-    setTimeout(() => EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR), 0)
-  }, [])
+  useShortcut('toggle_show_assistants', () => {
+    toggleShowAssistants()
+  })
+
+  useShortcut('toggle_show_topics', () => {
+    if (topicPosition === 'right') {
+      toggleShowTopics()
+    } else {
+      EventEmitter.emit(EVENT_NAMES.SHOW_TOPIC_SIDEBAR)
+    }
+  })
+
+  useShortcut('search_message', () => {
+    SearchPopup.show()
+  })
 
   return (
-    <Navbar>
+    <Navbar className="home-navbar">
       {showAssistants && (
-        <NavbarLeft style={{ justifyContent: 'space-between', borderRight: 'none', padding: '0 8px' }}>
-          <NewButton onClick={toggleShowAssistants} style={{ marginLeft: isMac ? 8 : 0 }}>
+        <NavbarLeft style={{ justifyContent: 'space-between', borderRight: 'none', padding: 0 }}>
+          <NavbarIcon onClick={toggleShowAssistants} style={{ marginLeft: isMac ? 16 : 0 }}>
             <i className="iconfont icon-hide-sidebar" />
-          </NewButton>
-          <NewButton onClick={addNewTopic}>
+          </NavbarIcon>
+          <NavbarIcon onClick={() => EventEmitter.emit(EVENT_NAMES.ADD_NEW_TOPIC)}>
             <FormOutlined />
-          </NewButton>
+          </NavbarIcon>
         </NavbarLeft>
       )}
-      <NavbarRight style={{ justifyContent: 'space-between', paddingRight: isWindows ? 140 : 12, flex: 1 }}>
+      <NavbarRight
+        style={{ justifyContent: 'space-between', paddingRight: isWindows ? 140 : 12, flex: 1 }}
+        className="home-navbar-right">
         <HStack alignItems="center">
           {!showAssistants && (
-            <NewButton
-              onClick={() => toggleShowAssistants()}
-              style={{ marginRight: isMac ? 8 : 25, marginLeft: isMac ? 4 : 0 }}>
+            <NavbarIcon onClick={() => toggleShowAssistants()} style={{ marginRight: 8, marginLeft: isMac ? 4 : -12 }}>
               <i className="iconfont icon-show-sidebar" />
-            </NewButton>
+            </NavbarIcon>
           )}
           <TitleText
             style={{ marginRight: 10, cursor: 'pointer' }}
@@ -59,11 +76,24 @@ const HeaderNavbar: FC<Props> = ({ activeAssistant }) => {
           </TitleText>
           <SelectModelButton assistant={assistant} />
         </HStack>
-        <HStack alignItems="center">
+        <HStack alignItems="center" gap={8}>
+          <NarrowIcon onClick={() => SearchPopup.show()}>
+            <SearchOutlined />
+          </NarrowIcon>
+          <NarrowIcon onClick={() => dispatch(setNarrowMode(!narrowMode))}>
+            <i className="iconfont icon-icon-adaptive-width"></i>
+          </NarrowIcon>
+          {sidebarIcons.visible.includes('minapp') && (
+            <MinAppsPopover>
+              <NarrowIcon>
+                <i className="iconfont icon-appstore" />
+              </NarrowIcon>
+            </MinAppsPopover>
+          )}
           {topicPosition === 'right' && (
-            <NewButton onClick={toggleShowTopics}>
+            <NarrowIcon onClick={toggleShowTopics}>
               <i className={`iconfont icon-${showTopics ? 'show' : 'hide'}-sidebar`} />
-            </NewButton>
+            </NarrowIcon>
           )}
         </HStack>
       </NavbarRight>
@@ -71,7 +101,7 @@ const HeaderNavbar: FC<Props> = ({ activeAssistant }) => {
   )
 }
 
-export const NewButton = styled.div`
+export const NavbarIcon = styled.div`
   -webkit-app-region: none;
   border-radius: 8px;
   height: 30px;
@@ -91,6 +121,9 @@ export const NewButton = styled.div`
     &.icon-a-darkmode {
       font-size: 20px;
     }
+    &.icon-appstore {
+      font-size: 20px;
+    }
   }
   .anticon {
     color: var(--color-icon);
@@ -105,8 +138,17 @@ export const NewButton = styled.div`
 const TitleText = styled.span`
   margin-left: 5px;
   font-family: Ubuntu;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  user-select: none;
+  @media (max-width: 1080px) {
+    display: none;
+  }
+`
+
+const NarrowIcon = styled(NavbarIcon)`
+  @media (max-width: 1000px) {
+    display: none;
+  }
 `
 
 export default HeaderNavbar

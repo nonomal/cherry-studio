@@ -1,4 +1,4 @@
-import { DEFAULT_CONEXTCOUNT, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from '@renderer/config/constant'
+import { DEFAULT_CONTEXTCOUNT, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } from '@renderer/config/constant'
 import db from '@renderer/databases'
 import i18n from '@renderer/i18n'
 import store from '@renderer/store'
@@ -23,7 +23,15 @@ export function getDefaultTranslateAssistant(targetLanguage: string, text: strin
   const translateModel = getTranslateModel()
   const assistant: Assistant = getDefaultAssistant()
   assistant.model = translateModel
-  assistant.prompt = `Translate from input language to ${targetLanguage}, provide the translation result directly without any explanation, keep original format. If the target language is the same as the source language, do not translate. The text to be translated is as follows:\n\n ${text}`
+
+  assistant.settings = {
+    temperature: 0.7
+  }
+
+  assistant.prompt = store
+    .getState()
+    .settings.translateModelPrompt.replace('{{target_language}}', targetLanguage)
+    .replace('{{text}}', text)
   return assistant
 }
 
@@ -64,7 +72,7 @@ export function getAssistantProvider(assistant: Assistant): Provider {
   return provider || getDefaultProvider()
 }
 
-export function getProviderByModel(model?: Model) {
+export function getProviderByModel(model?: Model): Provider {
   const providers = store.getState().llm.providers
   const providerId = model ? model.provider : getDefaultProvider().id
   return providers.find((p) => p.id === providerId) as Provider
@@ -77,12 +85,12 @@ export function getProviderByModelId(modelId?: string) {
 }
 
 export const getAssistantSettings = (assistant: Assistant): AssistantSettings => {
-  const contextCount = assistant?.settings?.contextCount ?? DEFAULT_CONEXTCOUNT
+  const contextCount = assistant?.settings?.contextCount ?? DEFAULT_CONTEXTCOUNT
   const getAssistantMaxTokens = () => {
     if (assistant.settings?.enableMaxTokens) {
       const maxTokens = assistant.settings.maxTokens
       if (typeof maxTokens === 'number') {
-        return maxTokens > 100 ? maxTokens : DEFAULT_MAX_TOKENS
+        return maxTokens > 0 ? maxTokens : DEFAULT_MAX_TOKENS
       }
       return DEFAULT_MAX_TOKENS
     }
@@ -92,11 +100,14 @@ export const getAssistantSettings = (assistant: Assistant): AssistantSettings =>
   return {
     contextCount: contextCount === 20 ? 100000 : contextCount,
     temperature: assistant?.settings?.temperature ?? DEFAULT_TEMPERATURE,
+    topP: assistant?.settings?.topP ?? 1,
     enableMaxTokens: assistant?.settings?.enableMaxTokens ?? false,
     maxTokens: getAssistantMaxTokens(),
     streamOutput: assistant?.settings?.streamOutput ?? true,
     hideMessages: assistant?.settings?.hideMessages ?? false,
-    autoResetModel: assistant?.settings?.autoResetModel ?? false
+    defaultModel: assistant?.defaultModel ?? undefined,
+    autoResetModel: assistant?.settings?.autoResetModel ?? false,
+    customParameters: assistant?.settings?.customParameters ?? []
   }
 }
 

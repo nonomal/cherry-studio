@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
 import MessageContent from './MessageContent'
+import MessageErrorBoundary from './MessageErrorBoundary'
 import MessageHeader from './MessageHeader'
 import MessageMenubar from './MessageMenubar'
 import MessageTokens from './MessageTokens'
@@ -28,6 +29,9 @@ interface Props {
   onSetMessages?: Dispatch<SetStateAction<Message[]>>
   onDeleteMessage?: (message: Message) => void
 }
+
+const getMessageBackground = (isBubbleStyle: boolean, isAssistantMessage: boolean) =>
+  isBubbleStyle ? (isAssistantMessage ? 'var(--chat-background-assistant)' : 'var(--chat-background-user)') : undefined
 
 const MessageItem: FC<Props> = ({
   message: _message,
@@ -56,39 +60,38 @@ const MessageItem: FC<Props> = ({
   }, [messageFont])
 
   const messageBorder = showMessageDivider ? undefined : 'none'
-  const messageBackground = isBubbleStyle
-    ? isAssistantMessage
-      ? 'var(--chat-background-assistant)'
-      : 'var(--chat-background-user)'
-    : undefined
+  const messageBackground = getMessageBackground(isBubbleStyle, isAssistantMessage)
 
   const onEditMessage = useCallback(
     (msg: Message) => {
       setMessage(msg)
-      const messages = onGetMessages?.().map((m) => (m.id === message.id ? message : m))
+      const messages = onGetMessages?.()?.map((m) => (m.id === message.id ? msg : m))
       messages && onSetMessages?.(messages)
       topic && db.topics.update(topic.id, { messages })
     },
-    [message, onGetMessages, onSetMessages, topic]
+    [message.id, onGetMessages, onSetMessages, topic]
   )
+
+  const messageHighlightHandler = (highlight: boolean = true) => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollIntoView({ behavior: 'smooth' })
+      if (highlight) {
+        setTimeout(() => {
+          const classList = messageContainerRef.current?.classList
+          classList?.add('message-highlight')
+          setTimeout(() => classList?.remove('message-highlight'), 2500)
+        }, 500)
+      }
+    }
+  }
 
   useEffect(() => {
     const unsubscribes = [
-      EventEmitter.on(EVENT_NAMES.LOCATE_MESSAGE + ':' + message.id, (highlight: boolean = true) => {
-        if (messageContainerRef.current) {
-          messageContainerRef.current.scrollIntoView({ behavior: 'smooth' })
-          if (highlight) {
-            setTimeout(() => {
-              const classList = messageContainerRef.current?.classList
-              classList?.add('message-highlight')
-              setTimeout(() => classList?.remove('message-highlight'), 2500)
-            }, 500)
-          }
-        }
-      })
+      EventEmitter.on(EVENT_NAMES.LOCATE_MESSAGE + ':' + message.id, messageHighlightHandler),
+      EventEmitter.on(EVENT_NAMES.RESEND_MESSAGE + ':' + message.id, onEditMessage)
     ]
     return () => unsubscribes.forEach((unsub) => unsub())
-  }, [message])
+  }, [message, onEditMessage])
 
   useEffect(() => {
     if (message.role === 'user' && !message.usage) {
@@ -104,13 +107,19 @@ const MessageItem: FC<Props> = ({
 
   useEffect(() => {
     if (topic && onGetMessages && onSetMessages) {
-      if (message.status === 'sending' && index === 0) {
+      if (message.status === 'sending') {
         const messages = onGetMessages()
+        const assistantWithModel = message.model ? { ...assistant, model: message.model } : assistant
+
         fetchChatCompletion({
           message,
-          messages: messages.filter((m) => !m.status.includes('ing')),
-          assistant,
-          topic,
+          messages: messages
+            .filter((m) => !m.status.includes('ing'))
+            .slice(
+              0,
+              messages.findIndex((m) => m.id === message.id)
+            ),
+          assistant: assistantWithModel,
           onResponse: (msg) => {
             setMessage(msg)
             if (msg.status !== 'pending') {
@@ -123,7 +132,7 @@ const MessageItem: FC<Props> = ({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [message.status])
 
   if (hidePresetMessages && message.isPreset) {
     return null
@@ -131,9 +140,11 @@ const MessageItem: FC<Props> = ({
 
   if (message.type === 'clear') {
     return (
-      <Divider dashed style={{ padding: '0 20px' }} plain>
-        {t('chat.message.new.context')}
-      </Divider>
+      <NewContextMessage onClick={() => EventEmitter.emit(EVENT_NAMES.NEW_CONTEXT)}>
+        <Divider dashed style={{ padding: '0 20px' }} plain>
+          {t('chat.message.new.context')}
+        </Divider>
+      </NewContextMessage>
     )
   }
 
@@ -147,11 +158,13 @@ const MessageItem: FC<Props> = ({
       })}
       ref={messageContainerRef}
       style={isBubbleStyle ? { alignItems: isAssistantMessage ? 'start' : 'end' } : undefined}>
-      <MessageHeader message={message} assistant={assistant} model={model} />
+      <MessageHeader message={message} assistant={assistant} model={model} key={message.modelId} />
       <MessageContentContainer
         className="message-content-container"
         style={{ fontFamily, fontSize, background: messageBackground }}>
-        <MessageContent message={message} model={model} />
+        <MessageErrorBoundary>
+          <MessageContent message={message} model={model} />
+        </MessageErrorBoundary>
         {showMenubar && (
           <MessageFooter
             style={{
@@ -161,6 +174,7 @@ const MessageItem: FC<Props> = ({
             <MessageTokens message={message} isLastMessage={isLastMessage} />
             <MessageMenubar
               message={message}
+              assistantModel={assistant?.model}
               model={model}
               index={index}
               isLastMessage={isLastMessage}
@@ -168,6 +182,7 @@ const MessageItem: FC<Props> = ({
               setModel={setModel}
               onEditMessage={onEditMessage}
               onDeleteMessage={onDeleteMessage}
+              onGetMessages={onGetMessages}
             />
           </MessageFooter>
         )}
@@ -216,8 +231,12 @@ const MessageFooter = styled.div`
   align-items: center;
   padding: 2px 0;
   margin-top: 2px;
-  border-top: 0.5px dashed var(--color-border);
+  border-top: 1px dotted var(--color-border);
   gap: 20px;
+`
+
+const NewContextMessage = styled.div`
+  cursor: pointer;
 `
 
 export default memo(MessageItem)

@@ -1,7 +1,7 @@
 import { DownloadOutlined, ExpandOutlined } from '@ant-design/icons'
 import MinApp from '@renderer/components/MinApp'
 import { AppLogo } from '@renderer/config/env'
-import { extractTitle } from '@renderer/utils/formula'
+import { extractTitle } from '@renderer/utils/formats'
 import { Button } from 'antd'
 import { FC } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -32,10 +32,10 @@ const Artifacts: FC<Props> = ({ html }) => {
 
   return (
     <Container>
-      <Button type="primary" icon={<ExpandOutlined />} onClick={onPreview}>
+      <Button type="primary" icon={<ExpandOutlined />} onClick={onPreview} size="small">
         {t('chat.artifacts.button.preview')}
       </Button>
-      <Button icon={<DownloadOutlined />} onClick={onDownload}>
+      <Button icon={<DownloadOutlined />} onClick={onDownload} size="small">
         {t('chat.artifacts.button.download')}
       </Button>
     </Container>

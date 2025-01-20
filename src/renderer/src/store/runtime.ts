@@ -1,5 +1,20 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { AppLogo, UserAvatar } from '@renderer/config/env'
+import type { UpdateInfo } from 'electron-updater'
+
+export interface UpdateState {
+  info: UpdateInfo | null
+  checking: boolean
+  downloading: boolean
+  downloadProgress: number
+  available: boolean
+}
+
+export interface WebDAVSyncState {
+  lastSyncTime: number | null
+  syncing: boolean
+  lastSyncError: string | null
+}
 
 export interface RuntimeState {
   avatar: string
@@ -7,6 +22,8 @@ export interface RuntimeState {
   minappShow: boolean
   searching: boolean
   filesPath: string
+  update: UpdateState
+  webdavSync: WebDAVSyncState
 }
 
 const initialState: RuntimeState = {
@@ -14,7 +31,19 @@ const initialState: RuntimeState = {
   generating: false,
   minappShow: false,
   searching: false,
-  filesPath: ''
+  filesPath: '',
+  update: {
+    info: null,
+    checking: false,
+    downloading: false,
+    downloadProgress: 0,
+    available: false
+  },
+  webdavSync: {
+    lastSyncTime: null,
+    syncing: false,
+    lastSyncError: null
+  }
 }
 
 const runtimeSlice = createSlice({
@@ -35,10 +64,24 @@ const runtimeSlice = createSlice({
     },
     setFilesPath: (state, action: PayloadAction<string>) => {
       state.filesPath = action.payload
+    },
+    setUpdateState: (state, action: PayloadAction<Partial<UpdateState>>) => {
+      state.update = { ...state.update, ...action.payload }
+    },
+    setWebDAVSyncState: (state, action: PayloadAction<Partial<WebDAVSyncState>>) => {
+      state.webdavSync = { ...state.webdavSync, ...action.payload }
     }
   }
 })
 
-export const { setAvatar, setGenerating, setMinappShow, setSearching, setFilesPath } = runtimeSlice.actions
+export const {
+  setAvatar,
+  setGenerating,
+  setMinappShow,
+  setSearching,
+  setFilesPath,
+  setUpdateState,
+  setWebDAVSyncState
+} = runtimeSlice.actions
 
 export default runtimeSlice.reducer

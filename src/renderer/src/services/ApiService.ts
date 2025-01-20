@@ -1,7 +1,7 @@
 import i18n from '@renderer/i18n'
 import store from '@renderer/store'
 import { setGenerating } from '@renderer/store/runtime'
-import { Assistant, Message, Provider, Suggestion, Topic } from '@renderer/types'
+import { Assistant, Message, Model, Provider, Suggestion } from '@renderer/types'
 import { isEmpty } from 'lodash'
 
 import AiProvider from '../providers/AiProvider'
@@ -24,7 +24,6 @@ export async function fetchChatCompletion({
 }: {
   message: Message
   messages: Message[]
-  topic: Topic
   assistant: Assistant
   onResponse: (message: Message) => void
 }) {
@@ -57,9 +56,15 @@ export async function fetchChatCompletion({
       messages,
       assistant,
       onFilterMessages: (messages) => (_messages = messages),
-      onChunk: ({ text, usage }) => {
+      onChunk: ({ text, usage, metrics, search }) => {
         message.content = message.content + text || ''
         message.usage = usage
+        message.metrics = metrics
+
+        if (search) {
+          message.metadata = { groundingMetadata: search }
+        }
+
         onResponse({ ...message, status: 'pending' })
       }
     })
@@ -74,11 +79,7 @@ export async function fetchChatCompletion({
     }
   } catch (error: any) {
     message.status = 'error'
-    try {
-      message.content = '```json\n' + JSON.stringify(error, null, 2) + '\n```'
-    } catch (e) {
-      message.content = 'Error: ' + error.message
-    }
+    message.content = formatErrorMessage(error)
   }
 
   timer && clearInterval(timer)
@@ -100,7 +101,13 @@ export async function fetchChatCompletion({
   return message
 }
 
-export async function fetchTranslate({ message, assistant }: { message: Message; assistant: Assistant }) {
+interface FetchTranslateProps {
+  message: Message
+  assistant: Assistant
+  onResponse?: (text: string) => void
+}
+
+export async function fetchTranslate({ message, assistant, onResponse }: FetchTranslateProps) {
   const model = getTranslateModel()
 
   if (!model) {
@@ -116,7 +123,7 @@ export async function fetchTranslate({ message, assistant }: { message: Message;
   const AI = new AiProvider(provider)
 
   try {
-    return await AI.translate(message, assistant)
+    return await AI.translate(message, assistant, onResponse)
   } catch (error: any) {
     return ''
   }
@@ -163,8 +170,6 @@ export async function fetchSuggestions({
   messages: Message[]
   assistant: Assistant
 }): Promise<Suggestion[]> {
-  const provider = getAssistantProvider(assistant)
-  const AI = new AiProvider(provider)
   const model = assistant.model
 
   if (!model) {
@@ -179,6 +184,9 @@ export async function fetchSuggestions({
     return []
   }
 
+  const provider = getAssistantProvider(assistant)
+  const AI = new AiProvider(provider)
+
   try {
     return await AI.suggestions(filterMessages(messages), assistant)
   } catch (error: any) {
@@ -186,8 +194,7 @@ export async function fetchSuggestions({
   }
 }
 
-export async function checkApi(provider: Provider) {
-  const model = provider.models[0]
+export async function checkApi(provider: Provider, model: Model) {
   const key = 'api-check'
   const style = { marginTop: '3vh' }
 
@@ -203,21 +210,14 @@ export async function checkApi(provider: Provider) {
     return false
   }
 
-  if (!model) {
+  if (isEmpty(provider.models)) {
     window.message.error({ content: i18n.t('message.error.enter.model'), key, style })
     return false
   }
 
   const AI = new AiProvider(provider)
 
-  const { valid } = await AI.check()
-
-  window.message[valid ? 'success' : 'error']({
-    key: 'api-check',
-    style: { marginTop: '3vh' },
-    duration: valid ? 2 : 8,
-    content: valid ? i18n.t('message.api.connection.success') : i18n.t('message.api.connection.failed')
-  })
+  const { valid } = await AI.check(model)
 
   return valid
 }
@@ -235,5 +235,13 @@ export async function fetchModels(provider: Provider) {
     return await AI.models()
   } catch (error) {
     return []
+  }
+}
+
+function formatErrorMessage(error: any): string {
+  try {
+    return '```json\n' + JSON.stringify(error, null, 2) + '\n```'
+  } catch (e) {
+    return 'Error: ' + error?.message
   }
 }

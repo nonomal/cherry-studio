@@ -1,5 +1,5 @@
-import { documentExts, imageExts } from '@main/constant'
 import { getFileType } from '@main/utils/file'
+import { documentExts, imageExts } from '@shared/config/constant'
 import { FileType } from '@types'
 import * as crypto from 'crypto'
 import {
@@ -8,7 +8,8 @@ import {
   OpenDialogOptions,
   OpenDialogReturnValue,
   SaveDialogOptions,
-  SaveDialogReturnValue
+  SaveDialogReturnValue,
+  shell
 } from 'electron'
 import logger from 'electron-log'
 import * as fs from 'fs'
@@ -262,9 +263,21 @@ class FileStorage {
     }
   }
 
+  public binaryFile = async (_: Electron.IpcMainInvokeEvent, id: string): Promise<{ data: Buffer; mime: string }> => {
+    const filePath = path.join(this.storageDir, id)
+    const data = await fs.promises.readFile(filePath)
+    const mime = `image/${path.extname(filePath).slice(1)}`
+    return { data, mime }
+  }
+
   public clear = async (): Promise<void> => {
     await fs.promises.rmdir(this.storageDir, { recursive: true })
     await this.initStorageDir()
+  }
+
+  public clearTemp = async (): Promise<void> => {
+    await fs.promises.rmdir(this.tempDir, { recursive: true })
+    await fs.promises.mkdir(this.tempDir, { recursive: true })
   }
 
   public open = async (
@@ -291,6 +304,10 @@ class FileStorage {
       logger.error('[IPC - Error]', 'An error occurred opening the file:', err)
       return null
     }
+  }
+
+  public openPath = async (_: Electron.IpcMainInvokeEvent, path: string): Promise<void> => {
+    shell.openPath(path).catch((err) => logger.error('[IPC - Error] Failed to open file:', err))
   }
 
   public save = async (

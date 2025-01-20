@@ -1,63 +1,115 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { ThemeMode } from '@renderer/types'
+import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
+import { CodeStyleVarious, LanguageVarious, ThemeMode } from '@renderer/types'
 
-export type SendMessageShortcut = 'Enter' | 'Shift+Enter'
+export type SendMessageShortcut = 'Enter' | 'Shift+Enter' | 'Ctrl+Enter' | 'Command+Enter'
+
+export type SidebarIcon = 'assistants' | 'agents' | 'paintings' | 'translate' | 'minapp' | 'knowledge' | 'files'
+
+export const DEFAULT_SIDEBAR_ICONS: SidebarIcon[] = [
+  'assistants',
+  'agents',
+  'paintings',
+  'translate',
+  'minapp',
+  'knowledge',
+  'files'
+]
 
 export interface SettingsState {
   showAssistants: boolean
   showTopics: boolean
   sendMessageShortcut: SendMessageShortcut
-  language: string
+  language: LanguageVarious
+  proxyMode: 'system' | 'custom' | 'none'
   proxyUrl?: string
   userName: string
   showMessageDivider: boolean
   messageFont: 'system' | 'serif'
   showInputEstimatedTokens: boolean
+  tray: boolean
   theme: ThemeMode
   windowStyle: 'transparent' | 'opaque'
   fontSize: number
   topicPosition: 'left' | 'right'
   showTopicTime: boolean
   pasteLongTextAsFile: boolean
+  pasteLongTextThreshold: number
   clickAssistantToShowTopic: boolean
   manualUpdateCheck: boolean
   renderInputMessageAsMarkdown: boolean
   codeShowLineNumbers: boolean
+  codeCollapsible: boolean
   mathEngine: 'MathJax' | 'KaTeX'
   messageStyle: 'plain' | 'bubble'
+  codeStyle: CodeStyleVarious
   // webdav 配置 host, user, pass, path
   webdavHost: string
   webdavUser: string
   webdavPass: string
   webdavPath: string
+  webdavAutoSync: boolean
+  webdavSyncInterval: number
+  translateModelPrompt: string
+  autoTranslateWithSpace: boolean
+  enableTopicNaming: boolean
+  customCss: string
+  topicNamingPrompt: string
+  // Sidebar icons
+  sidebarIcons: {
+    visible: SidebarIcon[]
+    disabled: SidebarIcon[]
+  }
+  narrowMode: boolean
+  enableQuickAssistant: boolean
+  clickTrayToShowQuickAssistant: boolean
 }
 
 const initialState: SettingsState = {
   showAssistants: true,
   showTopics: true,
   sendMessageShortcut: 'Enter',
-  language: navigator.language,
+  language: navigator.language as LanguageVarious,
+  proxyMode: 'system',
   proxyUrl: undefined,
   userName: '',
-  showMessageDivider: false,
+  showMessageDivider: true,
   messageFont: 'system',
   showInputEstimatedTokens: false,
+  tray: true,
   theme: ThemeMode.auto,
   windowStyle: 'transparent',
   fontSize: 14,
   topicPosition: 'left',
   showTopicTime: false,
   pasteLongTextAsFile: false,
+  pasteLongTextThreshold: 1500,
   clickAssistantToShowTopic: false,
   manualUpdateCheck: false,
-  renderInputMessageAsMarkdown: true,
+  renderInputMessageAsMarkdown: false,
   codeShowLineNumbers: false,
+  codeCollapsible: false,
   mathEngine: 'MathJax',
   messageStyle: 'plain',
+  codeStyle: 'auto',
   webdavHost: '',
   webdavUser: '',
   webdavPass: '',
-  webdavPath: '/cherry-studio'
+  webdavPath: '/cherry-studio',
+  webdavAutoSync: false,
+  webdavSyncInterval: 0,
+  translateModelPrompt: TRANSLATE_PROMPT,
+  autoTranslateWithSpace: false,
+  enableTopicNaming: true,
+  customCss: '',
+  topicNamingPrompt: '',
+  sidebarIcons: {
+    visible: DEFAULT_SIDEBAR_ICONS,
+    disabled: []
+  },
+  narrowMode: false,
+  enableQuickAssistant: false,
+  clickTrayToShowQuickAssistant: false
 }
 
 const settingsSlice = createSlice({
@@ -79,8 +131,12 @@ const settingsSlice = createSlice({
     setSendMessageShortcut: (state, action: PayloadAction<SendMessageShortcut>) => {
       state.sendMessageShortcut = action.payload
     },
-    setLanguage: (state, action: PayloadAction<string>) => {
+    setLanguage: (state, action: PayloadAction<LanguageVarious>) => {
       state.language = action.payload
+      window.electron.ipcRenderer.send('miniwindow-reload')
+    },
+    setProxyMode: (state, action: PayloadAction<'system' | 'custom' | 'none'>) => {
+      state.proxyMode = action.payload
     },
     setProxyUrl: (state, action: PayloadAction<string | undefined>) => {
       state.proxyUrl = action.payload
@@ -96,6 +152,9 @@ const settingsSlice = createSlice({
     },
     setShowInputEstimatedTokens: (state, action: PayloadAction<boolean>) => {
       state.showInputEstimatedTokens = action.payload
+    },
+    setTray: (state, action: PayloadAction<boolean>) => {
+      state.tray = action.payload
     },
     setTheme: (state, action: PayloadAction<ThemeMode>) => {
       state.theme = action.payload
@@ -116,6 +175,9 @@ const settingsSlice = createSlice({
     setPasteLongTextAsFile: (state, action: PayloadAction<boolean>) => {
       state.pasteLongTextAsFile = action.payload
     },
+    setRenderInputMessageAsMarkdown: (state, action: PayloadAction<boolean>) => {
+      state.renderInputMessageAsMarkdown = action.payload
+    },
     setClickAssistantToShowTopic: (state, action: PayloadAction<boolean>) => {
       state.clickAssistantToShowTopic = action.payload
     },
@@ -134,17 +196,61 @@ const settingsSlice = createSlice({
     setWebdavPath: (state, action: PayloadAction<string>) => {
       state.webdavPath = action.payload
     },
-    setRenderInputMessageAsMarkdown: (state, action: PayloadAction<boolean>) => {
-      state.renderInputMessageAsMarkdown = action.payload
+    setWebdavAutoSync: (state, action: PayloadAction<boolean>) => {
+      state.webdavAutoSync = action.payload
+    },
+    setWebdavSyncInterval: (state, action: PayloadAction<number>) => {
+      state.webdavSyncInterval = action.payload
     },
     setCodeShowLineNumbers: (state, action: PayloadAction<boolean>) => {
       state.codeShowLineNumbers = action.payload
+    },
+    setCodeCollapsible: (state, action: PayloadAction<boolean>) => {
+      state.codeCollapsible = action.payload
     },
     setMathEngine: (state, action: PayloadAction<'MathJax' | 'KaTeX'>) => {
       state.mathEngine = action.payload
     },
     setMessageStyle: (state, action: PayloadAction<'plain' | 'bubble'>) => {
       state.messageStyle = action.payload
+    },
+    setCodeStyle: (state, action: PayloadAction<CodeStyleVarious>) => {
+      state.codeStyle = action.payload
+    },
+    setTranslateModelPrompt: (state, action: PayloadAction<string>) => {
+      state.translateModelPrompt = action.payload
+    },
+    setAutoTranslateWithSpace: (state, action: PayloadAction<boolean>) => {
+      state.autoTranslateWithSpace = action.payload
+    },
+    setEnableTopicNaming: (state, action: PayloadAction<boolean>) => {
+      state.enableTopicNaming = action.payload
+    },
+    setPasteLongTextThreshold: (state, action: PayloadAction<number>) => {
+      state.pasteLongTextThreshold = action.payload
+    },
+    setCustomCss: (state, action: PayloadAction<string>) => {
+      state.customCss = action.payload
+    },
+    setTopicNamingPrompt: (state, action: PayloadAction<string>) => {
+      state.topicNamingPrompt = action.payload
+    },
+    setSidebarIcons: (state, action: PayloadAction<{ visible?: SidebarIcon[]; disabled?: SidebarIcon[] }>) => {
+      if (action.payload.visible) {
+        state.sidebarIcons.visible = action.payload.visible
+      }
+      if (action.payload.disabled) {
+        state.sidebarIcons.disabled = action.payload.disabled
+      }
+    },
+    setNarrowMode: (state, action: PayloadAction<boolean>) => {
+      state.narrowMode = action.payload
+    },
+    setClickTrayToShowQuickAssistant: (state, action: PayloadAction<boolean>) => {
+      state.clickTrayToShowQuickAssistant = action.payload
+    },
+    setEnableQuickAssistant: (state, action: PayloadAction<boolean>) => {
+      state.enableQuickAssistant = action.payload
     }
   }
 })
@@ -156,11 +262,13 @@ export const {
   toggleShowTopics,
   setSendMessageShortcut,
   setLanguage,
+  setProxyMode,
   setProxyUrl,
   setUserName,
   setShowMessageDivider,
   setMessageFont,
   setShowInputEstimatedTokens,
+  setTray,
   setTheme,
   setFontSize,
   setWindowStyle,
@@ -174,9 +282,23 @@ export const {
   setWebdavUser,
   setWebdavPass,
   setWebdavPath,
+  setWebdavAutoSync,
+  setWebdavSyncInterval,
   setCodeShowLineNumbers,
+  setCodeCollapsible,
   setMathEngine,
-  setMessageStyle
+  setMessageStyle,
+  setCodeStyle,
+  setTranslateModelPrompt,
+  setAutoTranslateWithSpace,
+  setEnableTopicNaming,
+  setPasteLongTextThreshold,
+  setCustomCss,
+  setTopicNamingPrompt,
+  setSidebarIcons,
+  setNarrowMode,
+  setClickTrayToShowQuickAssistant,
+  setEnableQuickAssistant
 } = settingsSlice.actions
 
 export default settingsSlice.reducer

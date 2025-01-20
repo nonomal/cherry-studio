@@ -45,4 +45,24 @@ export const AGENT_PROMPT = `
 `
 
 export const SUMMARIZE_PROMPT =
-  '你是一名擅长会话的助理，你需要将用户的会话总结为 10 个字以内的标题，不要使用标点符号和其他特殊符号。'
+  '你是一名擅长会话的助理，你需要将用户的会话总结为 10 个字以内的标题，标题语言与用户的首要语言一致，不要使用标点符号和其他特殊符号'
+
+export const TRANSLATE_PROMPT =
+  'You are a translation expert. Translate from input language to {{target_language}}, provide the translation result directly without any explanation and keep original format. Do not translate if the target language is the same as the source language.'
+
+export const REFERENCE_PROMPT = `请根据参考资料回答问题，并使用脚注格式引用数据来源。请忽略无关的参考资料。
+
+## 脚注格式：
+
+1. **脚注标记**：在正文中使用 [^数字] 的形式标记脚注，例如 [^1]。
+2. **脚注内容**：在文档末尾使用 [^数字]: 脚注内容 的形式定义脚注的具体内容
+3. **脚注内容**：应该尽量简洁
+
+## 我的问题是：
+
+{question}
+
+## 参考资料：
+
+{references}
+`

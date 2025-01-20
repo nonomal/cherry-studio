@@ -1,12 +1,25 @@
+import { isMac } from '@renderer/config/constant'
+import { DEFAULT_MIN_APPS } from '@renderer/config/minapps'
 import { SYSTEM_MODELS } from '@renderer/config/models'
+import { TRANSLATE_PROMPT } from '@renderer/config/prompts'
 import db from '@renderer/databases'
 import i18n from '@renderer/i18n'
 import { Assistant } from '@renderer/types'
-import { runAsyncFunction, uuid } from '@renderer/utils'
+import { getDefaultGroupName, runAsyncFunction, uuid } from '@renderer/utils'
 import { isEmpty } from 'lodash'
 import { createMigrate } from 'redux-persist'
 
 import { RootState } from '.'
+import { DEFAULT_SIDEBAR_ICONS } from './settings'
+
+// remove logo base64 data to reduce the size of the state
+function removeMiniAppIconsFromState(state: RootState) {
+  if (state.minapps) {
+    state.minapps.enabled = state.minapps.enabled.map((app) => ({ ...app, logo: undefined }))
+    state.minapps.disabled = state.minapps.disabled.map((app) => ({ ...app, logo: undefined }))
+    state.minapps.pinned = state.minapps.pinned.map((app) => ({ ...app, logo: undefined }))
+  }
+}
 
 const migrateConfig = {
   '2': (state: RootState) => {
@@ -621,6 +634,248 @@ const migrateConfig = {
   },
   '37': (state: RootState) => {
     state.settings.messageStyle = 'plain'
+    return state
+  },
+  '38': (state: RootState) => {
+    return {
+      ...state,
+      llm: {
+        ...state.llm,
+        providers: [
+          ...state.llm.providers,
+          {
+            id: 'grok',
+            name: 'Grok',
+            apiKey: '',
+            apiHost: 'https://api.x.ai',
+            models: SYSTEM_MODELS.grok,
+            isSystem: true,
+            enabled: false
+          },
+          {
+            id: 'hyperbolic',
+            name: 'Hyperbolic',
+            apiKey: '',
+            apiHost: 'https://api.hyperbolic.xyz',
+            models: SYSTEM_MODELS.hyperbolic,
+            isSystem: true,
+            enabled: false
+          },
+          {
+            id: 'mistral',
+            name: 'Mistral',
+            apiKey: '',
+            apiHost: 'https://api.mistral.ai',
+            models: SYSTEM_MODELS.mistral,
+            isSystem: true,
+            enabled: false
+          }
+        ]
+      }
+    }
+  },
+  '39': (state: RootState) => {
+    state.settings.codeStyle = 'auto'
+    return state
+  },
+  '40': (state: RootState) => {
+    state.settings.tray = true
+    return state
+  },
+  '41': (state: RootState) => {
+    state.llm.providers.forEach((provider) => {
+      if (provider.id === 'gemini') {
+        provider.type = 'gemini'
+      } else if (provider.id === 'anthropic') {
+        provider.type = 'anthropic'
+      } else {
+        provider.type = 'openai'
+      }
+    })
+    return state
+  },
+  '42': (state: RootState) => {
+    state.settings.proxyMode = state.settings.proxyUrl ? 'custom' : 'none'
+    return state
+  },
+  '43': (state: RootState) => {
+    if (state.settings.proxyMode === 'none') {
+      state.settings.proxyMode = 'system'
+    }
+    return state
+  },
+  '44': (state: RootState) => {
+    state.settings.translateModelPrompt = TRANSLATE_PROMPT
+    return state
+  },
+  '45': (state: RootState) => {
+    state.settings.enableTopicNaming = true
+    return state
+  },
+  '46': (state: RootState) => {
+    if (
+      state.settings?.translateModelPrompt?.includes(
+        'If the target language is the same as the source language, do not translate'
+      )
+    ) {
+      state.settings.translateModelPrompt = TRANSLATE_PROMPT
+    }
+    return state
+  },
+  '47': (state: RootState) => {
+    state.llm.providers.forEach((provider) => {
+      provider.models.forEach((model) => {
+        model.group = getDefaultGroupName(model.id)
+      })
+    })
+    return state
+  },
+  '48': (state: RootState) => {
+    if (state.shortcuts) {
+      state.shortcuts.shortcuts.forEach((shortcut) => {
+        shortcut.system = shortcut.key !== 'new_topic'
+      })
+      state.shortcuts.shortcuts.push({
+        key: 'toggle_show_assistants',
+        shortcut: [isMac ? 'Command' : 'Ctrl', '['],
+        editable: true,
+        enabled: true,
+        system: false
+      })
+      state.shortcuts.shortcuts.push({
+        key: 'toggle_show_topics',
+        shortcut: [isMac ? 'Command' : 'Ctrl', ']'],
+        editable: true,
+        enabled: true,
+        system: false
+      })
+    }
+    return state
+  },
+  '49': (state: RootState) => {
+    state.settings.pasteLongTextThreshold = 1500
+    if (state.shortcuts) {
+      state.shortcuts.shortcuts = [
+        ...state.shortcuts.shortcuts,
+        {
+          key: 'copy_last_message',
+          shortcut: [isMac ? 'Command' : 'Ctrl', 'Shift', 'C'],
+          editable: true,
+          enabled: false,
+          system: false
+        }
+      ]
+    }
+    return state
+  },
+  '50': (state: RootState) => {
+    state.llm.providers.push({
+      id: 'jina',
+      name: 'Jina',
+      type: 'openai',
+      apiKey: '',
+      apiHost: 'https://api.jina.ai',
+      models: SYSTEM_MODELS.jina,
+      isSystem: true,
+      enabled: false
+    })
+    return state
+  },
+  '51': (state: RootState) => {
+    state.settings.topicNamingPrompt = ''
+    return state
+  },
+  '54': (state: RootState) => {
+    if (state.shortcuts) {
+      state.shortcuts.shortcuts.push({
+        key: 'search_message',
+        shortcut: [isMac ? 'Command' : 'Ctrl', 'F'],
+        editable: true,
+        enabled: true,
+        system: false
+      })
+    }
+    state.settings.sidebarIcons = {
+      visible: DEFAULT_SIDEBAR_ICONS,
+      disabled: []
+    }
+    return state
+  },
+  '55': (state: RootState) => {
+    if (!state.settings.sidebarIcons) {
+      state.settings.sidebarIcons = {
+        visible: DEFAULT_SIDEBAR_ICONS,
+        disabled: []
+      }
+    }
+    return state
+  },
+  '56': (state: RootState) => {
+    state.llm.providers.push({
+      id: 'qwenlm',
+      name: 'QwenLM',
+      type: 'openai',
+      apiKey: '',
+      apiHost: 'https://chat.qwenlm.ai/api/',
+      models: SYSTEM_MODELS.qwenlm,
+      isSystem: true,
+      enabled: false
+    })
+    return state
+  },
+  '57': (state: RootState) => {
+    if (state.shortcuts) {
+      state.shortcuts.shortcuts.push({
+        key: 'mini_window',
+        shortcut: [isMac ? 'Command' : 'Ctrl', 'E'],
+        editable: true,
+        enabled: false,
+        system: true
+      })
+    }
+
+    removeMiniAppIconsFromState(state)
+
+    state.llm.providers.forEach((provider) => {
+      if (provider.id === 'qwenlm') {
+        provider.type = 'qwenlm'
+      }
+    })
+
+    state.settings.enableQuickAssistant = false
+    state.settings.clickTrayToShowQuickAssistant = true
+
+    return state
+  },
+  '58': (state: RootState) => {
+    if (state.shortcuts) {
+      state.shortcuts.shortcuts.push(
+        {
+          key: 'clear_topic',
+          shortcut: [isMac ? 'Command' : 'Ctrl', 'L'],
+          editable: true,
+          enabled: true,
+          system: false
+        },
+        {
+          key: 'toggle_new_context',
+          shortcut: [isMac ? 'Command' : 'Ctrl', 'R'],
+          editable: true,
+          enabled: true,
+          system: false
+        }
+      )
+    }
+    return state
+  },
+  '59': (state: RootState) => {
+    if (state.minapps) {
+      const flowith = DEFAULT_MIN_APPS.find((app) => app.id === 'flowith')
+      if (flowith) {
+        state.minapps.enabled.push(flowith)
+      }
+    }
+    removeMiniAppIconsFromState(state)
     return state
   }
 }

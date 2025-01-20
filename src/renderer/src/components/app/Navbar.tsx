@@ -38,7 +38,6 @@ const NavbarContainer = styled.div`
   max-height: var(--navbar-height);
   margin-left: ${isMac ? 'calc(var(--sidebar-width) * -1)' : 0};
   padding-left: ${isMac ? 'var(--sidebar-width)' : 0};
-  transition: background-color 0.3s ease;
   -webkit-app-region: drag;
 `
 
@@ -56,7 +55,7 @@ const NavbarCenterContainer = styled.div`
   flex: 1;
   display: flex;
   align-items: center;
-  padding: 0 ${isMac ? '20px' : '15px'};
+  padding: 0 ${isMac ? '20px' : 0};
   font-weight: bold;
   color: var(--color-text-1);
 `

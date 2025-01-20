@@ -1,33 +1,29 @@
 import KeyvStorage from '@kangfenmao/keyv-storage'
-import localforage from 'localforage'
 
-import { APP_NAME } from './config/env'
-import { ThemeMode } from './types'
-import { loadScript } from './utils'
+import { startAutoSync } from './services/BackupService'
+import store from './store'
 
-export async function initMermaid(theme: ThemeMode) {
-  if (!window.mermaid) {
-    await loadScript('https://unpkg.com/mermaid@10.9.1/dist/mermaid.min.js')
-    window.mermaid.initialize({
-      startOnLoad: true,
-      theme: theme === ThemeMode.dark ? 'dark' : 'default',
-      securityLevel: 'loose'
-    })
-    window.mermaid.contentLoaded()
+function initSpinner() {
+  const spinner = document.getElementById('spinner')
+  if (spinner && window.location.hash !== '#/mini') {
+    spinner.style.display = 'flex'
   }
 }
 
-function init() {
-  localforage.config({
-    driver: localforage.INDEXEDDB,
-    name: 'CherryAI',
-    version: 1.0,
-    storeName: 'cherryai',
-    description: `${APP_NAME} Storage`
-  })
-
+function initKeyv() {
   window.keyv = new KeyvStorage()
   window.keyv.init()
 }
 
-init()
+function initAutoSync() {
+  setTimeout(() => {
+    const { webdavAutoSync } = store.getState().settings
+    if (webdavAutoSync) {
+      startAutoSync()
+    }
+  }, 2000)
+}
+
+initSpinner()
+initKeyv()
+initAutoSync()

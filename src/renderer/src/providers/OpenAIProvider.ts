@@ -1,10 +1,11 @@
-import { isSupportedModel, isVisionModel } from '@renderer/config/models'
-import { SUMMARIZE_PROMPT } from '@renderer/config/prompts'
+import { getOpenAIWebSearchParams, isSupportedModel, isVisionModel } from '@renderer/config/models'
+import { getStoreSetting } from '@renderer/hooks/useSettings'
+import i18n from '@renderer/i18n'
 import { getAssistantSettings, getDefaultModel, getTopNamingModel } from '@renderer/services/AssistantService'
 import { EVENT_NAMES } from '@renderer/services/EventService'
 import { filterContextMessages } from '@renderer/services/MessagesService'
-import { Assistant, FileTypes, Message, Model, Provider, Suggestion } from '@renderer/types'
-import { removeQuotes } from '@renderer/utils'
+import { Assistant, FileTypes, GenerateImageParams, Message, Model, Provider, Suggestion } from '@renderer/types'
+import { removeSpecialCharacters } from '@renderer/utils'
 import { takeRight } from 'lodash'
 import OpenAI, { AzureOpenAI } from 'openai'
 import {
@@ -13,6 +14,7 @@ import {
   ChatCompletionMessageParam
 } from 'openai/resources'
 
+import { CompletionsParams } from '.'
 import BaseProvider from './BaseProvider'
 
 export default class OpenAIProvider extends BaseProvider {
@@ -20,10 +22,11 @@ export default class OpenAIProvider extends BaseProvider {
 
   constructor(provider: Provider) {
     super(provider)
+
     if (provider.id === 'azure-openai') {
       this.sdk = new AzureOpenAI({
         dangerouslyAllowBrowser: true,
-        apiKey: provider.apiKey,
+        apiKey: this.apiKey,
         apiVersion: provider.apiVersion,
         endpoint: provider.apiHost
       })
@@ -32,20 +35,14 @@ export default class OpenAIProvider extends BaseProvider {
 
     this.sdk = new OpenAI({
       dangerouslyAllowBrowser: true,
-      apiKey: provider.apiKey,
-      baseURL: this.getBaseURL()
+      apiKey: this.apiKey,
+      baseURL: this.getBaseURL(),
+      defaultHeaders: this.defaultHeaders()
     })
   }
 
-  private isSupportStreamOutput(modelId: string): boolean {
-    if (modelId.includes('o1-')) {
-      return false
-    }
-    return true
-  }
-
   private get isNotSupportFiles() {
-    const providers = ['deepseek', 'baichuan', 'minimax', 'doubao']
+    const providers = ['deepseek', 'baichuan', 'minimax']
     return providers.includes(this.provider.id)
   }
 
@@ -54,11 +51,12 @@ export default class OpenAIProvider extends BaseProvider {
     model: Model
   ): Promise<OpenAI.Chat.Completions.ChatCompletionMessageParam> {
     const isVision = isVisionModel(model)
+    const content = await this.getMessageContent(message)
 
     if (!message.files) {
       return {
         role: message.role,
-        content: message.content
+        content
       }
     }
 
@@ -78,21 +76,21 @@ export default class OpenAIProvider extends BaseProvider {
 
           return {
             role: message.role,
-            content: message.content + divider + text
+            content: content + divider + text
           }
         }
       }
 
       return {
         role: message.role,
-        content: message.content
+        content
       }
     }
 
     const parts: ChatCompletionContentPart[] = [
       {
         type: 'text',
-        text: message.content
+        text: content
       }
     ]
 
@@ -134,30 +132,43 @@ export default class OpenAIProvider extends BaseProvider {
       userMessages.push(await this.getMessageParam(message, model))
     }
 
-    const isOpenAIo1 = model.id.includes('o1-')
-    const isSupportStreamOutput = streamOutput && this.isSupportStreamOutput(model.id)
+    const isOpenAIo1 = model.id.startsWith('o1')
+
+    const isSupportStreamOutput = () => {
+      if (this.provider.id === 'github' && isOpenAIo1) {
+        return false
+      }
+      return streamOutput
+    }
+
+    let time_first_token_millsec = 0
+    const start_time_millsec = new Date().getTime()
 
     // @ts-ignore key is not typed
-    const stream = await this.sdk.chat.completions.create(
-      {
-        model: model.id,
-        messages: [isOpenAIo1 ? undefined : systemMessage, ...userMessages].filter(
-          Boolean
-        ) as ChatCompletionMessageParam[],
-        temperature: isOpenAIo1 ? 1 : assistant?.settings?.temperature,
-        max_tokens: maxTokens,
-        keep_alive: this.keepAliveTime,
-        stream: isSupportStreamOutput
-      },
-      {
-        headers: this.getHeaders()
-      }
-    )
+    const stream = await this.sdk.chat.completions.create({
+      model: model.id,
+      messages: [isOpenAIo1 ? undefined : systemMessage, ...userMessages].filter(
+        Boolean
+      ) as ChatCompletionMessageParam[],
+      temperature: isOpenAIo1 ? 1 : assistant?.settings?.temperature,
+      top_p: assistant?.settings?.topP,
+      max_tokens: maxTokens,
+      keep_alive: this.keepAliveTime,
+      stream: isSupportStreamOutput(),
+      ...(assistant.enableWebSearch ? getOpenAIWebSearchParams(model) : {}),
+      ...this.getCustomParameters(assistant)
+    })
 
-    if (!isSupportStreamOutput) {
+    if (!isSupportStreamOutput()) {
+      const time_completion_millsec = new Date().getTime() - start_time_millsec
       return onChunk({
         text: stream.choices[0].message?.content || '',
-        usage: stream.usage
+        usage: stream.usage,
+        metrics: {
+          completion_tokens: stream.usage?.completion_tokens,
+          time_completion_millsec,
+          time_first_token_millsec: 0
+        }
       })
     }
 
@@ -165,15 +176,23 @@ export default class OpenAIProvider extends BaseProvider {
       if (window.keyv.get(EVENT_NAMES.CHAT_COMPLETION_PAUSED)) {
         break
       }
-
+      if (time_first_token_millsec == 0) {
+        time_first_token_millsec = new Date().getTime() - start_time_millsec
+      }
+      const time_completion_millsec = new Date().getTime() - start_time_millsec
       onChunk({
         text: chunk.choices[0]?.delta?.content || '',
-        usage: chunk.usage
+        usage: chunk.usage,
+        metrics: {
+          completion_tokens: chunk.usage?.completion_tokens,
+          time_completion_millsec,
+          time_first_token_millsec
+        }
       })
     }
   }
 
-  async translate(message: Message, assistant: Assistant) {
+  async translate(message: Message, assistant: Assistant, onResponse?: (text: string) => void) {
     const defaultModel = getDefaultModel()
     const model = assistant.model || defaultModel
     const messages = [
@@ -181,20 +200,41 @@ export default class OpenAIProvider extends BaseProvider {
       { role: 'user', content: message.content }
     ]
 
-    // @ts-ignore key is not typed
-    const response = await this.sdk.chat.completions.create(
-      {
-        model: model.id,
-        messages: messages as ChatCompletionMessageParam[],
-        stream: false,
-        keep_alive: this.keepAliveTime
-      },
-      {
-        headers: this.getHeaders()
-      }
-    )
+    const isOpenAIo1 = model.id.startsWith('o1')
 
-    return response.choices[0].message?.content || ''
+    const isSupportedStreamOutput = () => {
+      if (!onResponse) {
+        return false
+      }
+      if (this.provider.id === 'github' && isOpenAIo1) {
+        return false
+      }
+      return true
+    }
+
+    const stream = isSupportedStreamOutput()
+
+    // @ts-ignore key is not typed
+    const response = await this.sdk.chat.completions.create({
+      model: model.id,
+      messages: messages as ChatCompletionMessageParam[],
+      stream,
+      keep_alive: this.keepAliveTime,
+      temperature: assistant?.settings?.temperature
+    })
+
+    if (!stream) {
+      return response.choices[0].message?.content || ''
+    }
+
+    let text = ''
+
+    for await (const chunk of response) {
+      text += chunk.choices[0]?.delta?.content || ''
+      onResponse?.(text)
+    }
+
+    return text
   }
 
   public async summaries(messages: Message[], assistant: Assistant): Promise<string> {
@@ -214,7 +254,7 @@ export default class OpenAIProvider extends BaseProvider {
 
     const systemMessage = {
       role: 'system',
-      content: SUMMARIZE_PROMPT
+      content: getStoreSetting('topicNamingPrompt') || i18n.t('prompts.title')
     }
 
     const userMessage = {
@@ -223,38 +263,28 @@ export default class OpenAIProvider extends BaseProvider {
     }
 
     // @ts-ignore key is not typed
-    const response = await this.sdk.chat.completions.create(
-      {
-        model: model.id,
-        messages: [systemMessage, userMessage] as ChatCompletionMessageParam[],
-        stream: false,
-        keep_alive: this.keepAliveTime,
-        max_tokens: 1000
-      },
-      {
-        headers: this.getHeaders()
-      }
-    )
+    const response = await this.sdk.chat.completions.create({
+      model: model.id,
+      messages: [systemMessage, userMessage] as ChatCompletionMessageParam[],
+      stream: false,
+      keep_alive: this.keepAliveTime,
+      max_tokens: 1000
+    })
 
-    return removeQuotes(response.choices[0].message?.content?.substring(0, 50) || '')
+    return removeSpecialCharacters(response.choices[0].message?.content?.substring(0, 50) || '')
   }
 
   public async generateText({ prompt, content }: { prompt: string; content: string }): Promise<string> {
     const model = getDefaultModel()
 
-    const response = await this.sdk.chat.completions.create(
-      {
-        model: model.id,
-        stream: false,
-        messages: [
-          { role: 'system', content: prompt },
-          { role: 'user', content }
-        ]
-      },
-      {
-        headers: this.getHeaders()
-      }
-    )
+    const response = await this.sdk.chat.completions.create({
+      model: model.id,
+      stream: false,
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content }
+      ]
+    })
 
     return response.choices[0].message?.content || ''
   }
@@ -269,7 +299,6 @@ export default class OpenAIProvider extends BaseProvider {
     const response: any = await this.sdk.request({
       method: 'post',
       path: '/advice_questions',
-      headers: this.getHeaders(),
       body: {
         messages: messages.filter((m) => m.role === 'user').map((m) => ({ role: m.role, content: m.content })),
         model: model.id,
@@ -282,8 +311,10 @@ export default class OpenAIProvider extends BaseProvider {
     return response?.questions?.filter(Boolean)?.map((q: any) => ({ content: q })) || []
   }
 
-  public async check(): Promise<{ valid: boolean; error: Error | null }> {
-    const model = this.provider.models[0]
+  public async check(model: Model): Promise<{ valid: boolean; error: Error | null }> {
+    if (!model) {
+      return { valid: false, error: new Error('No model found') }
+    }
 
     const body = {
       model: model.id,
@@ -293,9 +324,7 @@ export default class OpenAIProvider extends BaseProvider {
     }
 
     try {
-      const response = await this.sdk.chat.completions.create(body as ChatCompletionCreateParamsNonStreaming, {
-        headers: this.getHeaders()
-      })
+      const response = await this.sdk.chat.completions.create(body as ChatCompletionCreateParamsNonStreaming)
 
       return {
         valid: Boolean(response?.choices[0].message),
@@ -311,13 +340,7 @@ export default class OpenAIProvider extends BaseProvider {
 
   public async models(): Promise<OpenAI.Models.Model[]> {
     try {
-      const query: Record<string, any> = {}
-
-      if (this.provider.id === 'silicon') {
-        query.type = 'text'
-      }
-
-      const response = await this.sdk.models.list({ query, headers: this.getHeaders() })
+      const response = await this.sdk.models.list()
 
       if (this.provider.id === 'github') {
         // @ts-ignore key is not typed
@@ -352,6 +375,7 @@ export default class OpenAIProvider extends BaseProvider {
   }
 
   public async generateImage({
+    model,
     prompt,
     negativePrompt,
     imageSize,
@@ -359,34 +383,34 @@ export default class OpenAIProvider extends BaseProvider {
     seed,
     numInferenceSteps,
     guidanceScale,
-    signal
-  }: {
-    prompt: string
-    negativePrompt?: string
-    imageSize: string
-    batchSize: number
-    seed?: string
-    numInferenceSteps: number
-    guidanceScale: number
-    signal?: AbortSignal
-  }): Promise<string[]> {
+    signal,
+    promptEnhancement
+  }: GenerateImageParams): Promise<string[]> {
     const response = (await this.sdk.request({
       method: 'post',
       path: '/images/generations',
-      headers: this.getHeaders(),
       signal,
       body: {
-        model: 'stabilityai/stable-diffusion-3-5-large',
+        model,
         prompt,
         negative_prompt: negativePrompt,
         image_size: imageSize,
         batch_size: batchSize,
         seed: seed ? parseInt(seed) : undefined,
         num_inference_steps: numInferenceSteps,
-        guidance_scale: guidanceScale
+        guidance_scale: guidanceScale,
+        prompt_enhancement: promptEnhancement
       }
     })) as { data: Array<{ url: string }> }
 
     return response.data.map((item) => item.url)
+  }
+
+  public async getEmbeddingDimensions(model: Model): Promise<number> {
+    const data = await this.sdk.embeddings.create({
+      model: model.id,
+      input: 'hi'
+    })
+    return data.data[0].embedding.length
   }
 }

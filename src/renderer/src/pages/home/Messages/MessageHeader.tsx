@@ -9,7 +9,7 @@ import { Assistant, Message, Model } from '@renderer/types'
 import { firstLetter, removeLeadingEmoji } from '@renderer/utils'
 import { Avatar } from 'antd'
 import dayjs from 'dayjs'
-import { CSSProperties, FC, useCallback, useMemo } from 'react'
+import { CSSProperties, FC, memo, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import styled from 'styled-components'
 
@@ -19,31 +19,35 @@ interface Props {
   model?: Model
 }
 
-const MessageHeader: FC<Props> = ({ assistant, model, message }) => {
+const getAvatarSource = (isLocalAi: boolean, modelId: string | undefined) => {
+  if (isLocalAi) return AppLogo
+  return modelId ? getModelLogo(modelId) : undefined
+}
+
+const MessageHeader: FC<Props> = memo(({ assistant, model, message }) => {
   const avatar = useAvatar()
   const { theme } = useTheme()
-  const { userName } = useSettings()
+  const { userName, sidebarIcons } = useSettings()
   const { t } = useTranslation()
   const { isBubbleStyle } = useMessageStyle()
 
-  const avatarSource = useMemo(() => {
-    if (isLocalAi) return AppLogo
-    return message.modelId ? getModelLogo(message.modelId) : undefined
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message.modelId, theme])
+  const avatarSource = useMemo(() => getAvatarSource(isLocalAi, message.modelId), [message.modelId])
 
   const getUserName = useCallback(() => {
     if (isLocalAi && message.role !== 'user') return APP_NAME
-    if (message.role === 'assistant') return model?.name || model?.id || ''
+    if (message.role === 'assistant') return model?.name || model?.id || message.modelId || ''
     return userName || t('common.you')
-  }, [message.role, model?.id, model?.name, t, userName])
+  }, [message.modelId, message.role, model?.id, model?.name, t, userName])
 
   const isAssistantMessage = message.role === 'assistant'
+  const showMinappIcon = sidebarIcons.visible.includes('minapp')
 
   const avatarName = useMemo(() => firstLetter(assistant?.name).toUpperCase(), [assistant?.name])
   const username = useMemo(() => removeLeadingEmoji(getUserName()), [getUserName])
 
-  const showMiniApp = () => model?.provider && startMinAppById(model?.provider)
+  const showMiniApp = useCallback(() => {
+    showMinappIcon && model?.provider && startMinAppById(model.provider)
+  }, [model?.provider, showMinappIcon])
 
   const avatarStyle: CSSProperties | undefined = isBubbleStyle
     ? {
@@ -53,7 +57,7 @@ const MessageHeader: FC<Props> = ({ assistant, model, message }) => {
     : undefined
 
   return (
-    <Container>
+    <Container className="message-header">
       <AvatarWrapper style={avatarStyle}>
         {isAssistantMessage ? (
           <Avatar
@@ -61,7 +65,7 @@ const MessageHeader: FC<Props> = ({ assistant, model, message }) => {
             size={35}
             style={{
               borderRadius: '20%',
-              cursor: 'pointer',
+              cursor: showMinappIcon ? 'pointer' : 'default',
               border: isLocalAi ? '1px solid var(--color-border-soft)' : 'none',
               filter: theme === 'dark' ? 'invert(0.05)' : undefined
             }}
@@ -83,7 +87,9 @@ const MessageHeader: FC<Props> = ({ assistant, model, message }) => {
       </AvatarWrapper>
     </Container>
   )
-}
+})
+
+MessageHeader.displayName = 'MessageHeader'
 
 const Container = styled.div`
   display: flex;
